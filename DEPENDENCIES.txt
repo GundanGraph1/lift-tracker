@@ -1,0 +1,4 @@
+Run this command in your lift-tracker folder:
+npm install @supabase/supabase-js
+
+That's it! No other dependencies needed.

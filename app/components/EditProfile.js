@@ -1,0 +1,243 @@
+'use client'
+import { useState } from 'react'
+import { db } from '../../lib/supabase'
+import { useStore, actions } from '../../lib/store'
+import { THEMES, FONT_PACKS, applyTheme, getThemeFromUser } from '../../lib/themes'
+import { showToast } from './Toast'
+
+export default function EditProfile({ onClose }) {
+  const currentUser = useStore(s => s.currentUser)
+  const { themeKey: initTheme, fontKey: initFont } = getThemeFromUser(currentUser)
+
+  const [tab, setTab] = useState('profil') // 'profil' | 'theme'
+  const [username, setUsername] = useState(currentUser?.username || '')
+  const [pin, setPin] = useState('')
+  const [photo, setPhoto] = useState(null)
+  const [photoFile, setPhotoFile] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [selectedTheme, setSelectedTheme] = useState(initTheme)
+  const [selectedFont, setSelectedFont] = useState(initFont)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
+
+  const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
+  const previewAvatar = photo || currentUser?.avatar
+
+  function handlePhoto(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setPhoto(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  function selectTheme(tk) {
+    setSelectedTheme(tk)
+    applyTheme(tk, selectedFont)
+  }
+
+  function selectFont(fk) {
+    setSelectedFont(fk)
+    applyTheme(selectedTheme, fk)
+  }
+
+  async function save() {
+    if (!username.trim()) { showToast('Le pseudo ne peut pas être vide', 'var(--orange)'); return }
+    if (pin && (pin.length !== 4 || !/^\d{4}$/.test(pin))) { showToast('Le PIN doit faire 4 chiffres', 'var(--orange)'); return }
+    setSaving(true)
+
+    let avatarUrl = currentUser.avatar
+    if (photoFile) {
+      const fname = `${currentUser.id}_${Date.now()}`
+      const { error: upErr } = await db.storage.from('avatars').upload(fname, photoFile, { upsert: true })
+      if (!upErr) {
+        const { data: urlData } = db.storage.from('avatars').getPublicUrl(fname)
+        avatarUrl = urlData.publicUrl
+      }
+    }
+
+    const themeData = JSON.stringify({ themeKey: selectedTheme, fontKey: selectedFont })
+    const updates = { username: username.trim(), avatar: avatarUrl, theme: themeData, is_private: isPrivate }
+    if (pin) updates.pin = pin
+
+    const { error } = await db.from('users').update(updates).eq('id', currentUser.id)
+    if (error) { showToast('Erreur lors de la sauvegarde', 'var(--red)'); setSaving(false); return }
+
+    applyTheme(selectedTheme, selectedFont)
+    actions.setCurrentUser({ ...currentUser, ...updates })
+    showToast('✅ Profil mis à jour !')
+    setSaving(false)
+    onClose()
+  }
+
+  async function deleteProfile() {
+    if (!confirmDelete) { setConfirmDelete(true); return }
+    await db.from('sessions').delete().eq('user_id', currentUser.id)
+    await db.from('prs').delete().eq('user_id', currentUser.id)
+    await db.from('badges').delete().eq('user_id', currentUser.id)
+    await db.from('presets').delete().eq('user_id', currentUser.id)
+    await db.from('users').delete().eq('id', currentUser.id)
+    localStorage.removeItem('lt_user_id')
+    localStorage.removeItem('lt_page')
+    applyTheme('red', 'barlow')
+    actions.setCurrentUser(null)
+  }
+
+  const currentThemeObj = THEMES.find(t => t.key === selectedTheme) || THEMES[0]
+  const currentFontObj = FONT_PACKS.find(f => f.key === selectedFont) || FONT_PACKS[0]
+
+  return (
+    <div className="modal-overlay open" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxHeight: '88vh', overflowY: 'auto', padding: 0 }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
+          <div className="modal-title" style={{ marginBottom: 0 }}>⚙️ MON PROFIL</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 22, cursor: 'pointer' }}>×</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 6, padding: '14px 20px 0' }}>
+          {[{ k: 'profil', l: '👤 Profil' }, { k: 'theme', l: '🎨 Thème' }].map(t => (
+            <button key={t.k} onClick={() => setTab(t.k)} style={{
+              flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: tab === t.k ? 'var(--red)' : 'var(--s3)',
+              color: tab === t.k ? 'white' : 'var(--text2)',
+              fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13, transition: 'all .15s'
+            }}>{t.l}</button>
+          ))}
+        </div>
+
+        <div style={{ padding: '16px 20px 20px' }}>
+
+          {/* ── PROFIL TAB ── */}
+          {tab === 'profil' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+              {/* Avatar */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <label htmlFor="photo-input" style={{ cursor: 'pointer', position: 'relative' }}>
+                  <div style={{ width: 82, height: 82, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--border2)', background: 'var(--s3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 34 }}>
+                    {photo || isImg
+                      ? <img src={previewAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span>{currentUser?.avatar || '💪'}</span>
+                    }
+                  </div>
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✏️</div>
+                </label>
+                <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>Appuie sur la photo pour changer</span>
+              </div>
+
+              {/* Username */}
+              <div>
+                <label className="field-label">Pseudo</label>
+                <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Ton pseudo" maxLength={20} />
+              </div>
+
+              {/* PIN */}
+              <div>
+                <label className="field-label">Nouveau PIN (laisser vide = pas de changement)</label>
+                <input
+                  type="password" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,4))}
+                  placeholder="4 chiffres" inputMode="numeric" maxLength={4}
+                />
+              </div>
+
+              <button className="btn-primary" onClick={save} disabled={saving} style={{ marginTop: 4 }}>
+                {saving ? '⏳ Sauvegarde...' : '💾 Enregistrer'}
+              </button>
+
+              {/* Private mode */}
+              <div onClick={()=>setIsPrivate(p=>!p)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:'var(--s2)',border:`1px solid ${isPrivate?'var(--purple)':'var(--border)'}`,borderRadius:12,cursor:'pointer',transition:'all .2s'}}>
+                <div>
+                  <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>🔒 Mode privé</div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>Ne pas apparaître dans le classement</div>
+                </div>
+                <div style={{width:44,height:24,borderRadius:12,background:isPrivate?'var(--purple)':'var(--s3)',border:'1px solid var(--border2)',position:'relative',transition:'background .2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:3,left:isPrivate?22:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'left .2s'}}/>
+                </div>
+              </div>
+
+              {/* Delete */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+                <button onClick={deleteProfile} style={{
+                  width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
+                  background: confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.1)',
+                  border: `1px solid ${confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.3)'}`,
+                  color: 'var(--red)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
+                  transition: 'all .2s'
+                }}>
+                  {confirmDelete ? '⚠️ Confirmer la suppression' : '🗑 Supprimer le profil'}
+                </button>
+                {confirmDelete && <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 6 }}>Toutes tes données seront supprimées définitivement</div>}
+              </div>
+            </div>
+          )}
+
+          {/* ── THEME TAB ── */}
+          {tab === 'theme' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Preview */}
+              <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, textAlign: 'center' }}>
+                <div style={{ fontFamily: 'var(--fm)', fontSize: 28, fontWeight: 800, color: 'var(--red)', letterSpacing: 2, textTransform: 'uppercase' }}>LIFT TRACKER</div>
+                <div style={{ fontFamily: 'var(--fb)', fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>{currentThemeObj.name} · {currentFontObj.name}</div>
+                <div style={{ display: 'flex', gap: 5, justifyContent: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+                  <div style={{ background: 'var(--s3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text2)' }}>Dos</div>
+                  <div style={{ background: 'var(--red)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'white', fontWeight: 700 }}>Actif</div>
+                  <div style={{ background: 'var(--s3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text2)' }}>Stats</div>
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 10 }}>Couleur</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {THEMES.map(t => (
+                    <div key={t.key} onClick={() => selectTheme(t.key)} style={{
+                      border: `2px solid ${selectedTheme === t.key ? t.preview : 'transparent'}`,
+                      borderRadius: 12, padding: '10px 6px', cursor: 'pointer', background: 'var(--s2)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'all .15s',
+                    }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: t.preview, boxShadow: selectedTheme === t.key ? `0 0 10px ${t.preview}88` : 'none' }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, color: selectedTheme === t.key ? t.preview : 'var(--text3)', textAlign: 'center', lineHeight: 1.2 }}>{t.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fonts */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 10 }}>Police</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {FONT_PACKS.map(f => (
+                    <div key={f.key} onClick={() => selectFont(f.key)} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                      background: selectedFont === f.key ? `${currentThemeObj.preview}15` : 'var(--s2)',
+                      border: `1px solid ${selectedFont === f.key ? 'var(--red)' : 'var(--border)'}`,
+                      transition: 'all .15s',
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: selectedFont === f.key ? 'var(--red)' : 'var(--text)', lineHeight: 1, marginBottom: 1 }}>{f.name}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>{f.sub}</div>
+                      </div>
+                      {selectedFont === f.key && <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white' }}>✓</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button className="btn-primary" onClick={save} disabled={saving}>
+                {saving ? '⏳ Sauvegarde...' : '💾 Appliquer'}
+              </button>
+            </div>
+          )}
+
+        </div>
+      </div>
+    </div>
+  )
+}

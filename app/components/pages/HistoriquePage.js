@@ -1,0 +1,159 @@
+'use client'
+const isBW = (name) => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest')
+
+import { useState } from 'react'
+import { db } from '../../../lib/supabase'
+import { useStore } from '../../../lib/store'
+import ShareStory from '../ShareStory'
+import { MUSCLE_LABELS, MUSCLE_COLORS, normalize } from '../../../lib/constants'
+import { showToast } from '../Toast'
+
+export default function HistoriquePage({ onChanged }) {
+  const sessions = useStore(s => s.sessions)
+  const currentUser = useStore(s => s.currentUser)
+  const [filterMuscle, setFilterMuscle] = useState('all')
+  const [editSession, setEditSession] = useState(null)
+  const [shareSession, setShareSession] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const filtered = filterMuscle==='all' ? sessions : sessions.filter(s=>(s.muscle||'').split('+').includes(filterMuscle))
+
+  async function deleteSession(id) {
+    if (!confirm('Supprimer cette séance ?')) return
+    await db.from('sessions').delete().eq('id', id)
+    showToast('🗑 Séance supprimée')
+    onChanged()
+  }
+
+  function openEdit(s) {
+    setEditSession({...s, exercises: (s.exercises||[]).map(e=>({...e,sets:e.sets.map(st=>({...st}))}))})
+  }
+
+  function updateEditSet(ei, si, field, val) {
+    setEditSession(prev => {
+      const exos = [...prev.exercises]
+      exos[ei] = {...exos[ei], sets: exos[ei].sets.map((st,i)=>i===si?{...st,[field]:val}:st)}
+      return {...prev, exercises: exos}
+    })
+  }
+
+  async function saveEdit() {
+    if (!editSession) return
+    setSaving(true)
+    const totalVolume = editSession.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0),0)
+    const { error } = await db.from('sessions').update({
+      session_date: editSession.session_date,
+      session_time: editSession.session_time||'',
+      muscle: editSession.muscle,
+      notes: editSession.notes||'',
+      exercises: JSON.stringify(editSession.exercises),
+      total_volume: totalVolume
+    }).eq('id', editSession.id)
+    setSaving(false)
+    if (error) { showToast('Erreur', 'var(--red)'); return }
+    showToast('✅ Séance modifiée !')
+    setEditSession(null)
+    onChanged()
+  }
+
+  function getArrow(s, idx) {
+    const prev = sessions.filter(ss=>ss.muscle===s.muscle&&ss.id!==s.id).slice(idx)
+    if (!prev.length) return null
+    const p = prev[0]
+    if (s.total_volume > p.total_volume) return { dir:'up', pct: Math.round((s.total_volume-p.total_volume)/p.total_volume*100) }
+    if (s.total_volume < p.total_volume) return { dir:'down', pct: Math.round((p.total_volume-s.total_volume)/p.total_volume*100) }
+    return { dir:'eq' }
+  }
+
+  const muscles = ['all', ...Object.keys(MUSCLE_LABELS)]
+
+  return (
+    <div>
+      <div style={{marginBottom:20}}>
+        <div className="page-title">HISTORIQUE</div>
+        <div className="page-sub">{sessions.length} séances enregistrées</div>
+        <hr className="page-divider" />
+      </div>
+
+      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
+        {muscles.map(m => (
+          <button key={m} onClick={()=>setFilterMuscle(m)} style={{background:filterMuscle===m?'var(--red)':'var(--s2)',border:`1px solid ${filterMuscle===m?'var(--red)':'var(--border)'}`,borderRadius:20,padding:'5px 12px',color:filterMuscle===m?'white':'var(--text2)',cursor:'pointer',fontSize:11,fontFamily:'var(--fb)',fontWeight:600}}>{m==='all'?'Tout':MUSCLE_LABELS[m]}</button>
+        ))}
+      </div>
+
+      {filtered.length === 0 && <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>Aucune séance</div>}
+
+      {filtered.map((s,idx) => {
+        const arrow = getArrow(s, idx)
+        const color = MUSCLE_COLORS[s.muscle]||'var(--red)'
+        return (
+          <div key={s.id} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:14,marginBottom:10,overflow:'hidden'}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
+              <div style={{flex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                  <span style={{fontWeight:700,fontSize:14}}>{new Date(s.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit',year:'2-digit'})}</span>
+                  <span className={`hist-badge m-${(s.muscle||"").split("+")[0]}`}>{(s.muscle||"").split("+").map(m=>MUSCLE_LABELS[m]||m).join(" + ")}</span>
+                  {s.session_time && <span style={{fontSize:11,color:'var(--text3)'}}>⏰ {s.session_time}</span>}
+                </div>
+                {s.notes && <div style={{fontSize:11,color:'var(--text3)',marginTop:3,fontStyle:'italic'}}>"{s.notes}"</div>}
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontFamily:'var(--fm)',fontSize:18,fontWeight:700,color:'var(--green)'}}>{(s.total_volume||0).toLocaleString('fr')} kg</div>
+                {arrow && <div style={{fontSize:11,color:arrow.dir==='up'?'var(--green)':arrow.dir==='down'?'var(--red)':'var(--text3)'}}>{arrow.dir==='up'?'↑':arrow.dir==='down'?'↓':'='}{arrow.pct?` ${arrow.pct}%`:''}</div>}
+              </div>
+            </div>
+            <div style={{padding:'10px 14px'}}>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
+                {(s.exercises||[]).map((e,i) => {
+                  const maxW = e.sets.length?Math.max(...e.sets.map(st=>parseFloat(st.w)||0)):0
+                  return <div key={i} style={{background:'var(--s3)',borderRadius:8,padding:'4px 10px',fontSize:12,color:'var(--text2)'}}>{e.name} <span style={{color:'var(--text)',fontWeight:600}}>{maxW}kg</span></div>
+                })}
+              </div>
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>openEdit(s)} style={{background:'rgba(59,130,246,.15)',border:'1px solid rgba(59,130,246,.3)',borderRadius:8,padding:'5px 12px',color:'#60a5fa',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>✏️ Modifier</button>
+                <button onClick={()=>deleteSession(s.id)} style={{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.2)',borderRadius:8,padding:'5px 12px',color:'var(--red)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>🗑 Supprimer</button>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      {/* Edit modal */}
+      {editSession && (
+        <div className="modal-overlay open" onClick={e=>e.target===e.currentTarget&&setEditSession(null)}>
+          <div className="modal" style={{maxHeight:'85vh',overflowY:'auto'}}>
+            <div className="modal-title">✏️ MODIFIER LA SÉANCE</div>
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                <div><label className="field-label">Date</label><input type="date" value={editSession.session_date} onChange={e=>setEditSession(p=>({...p,session_date:e.target.value}))}/></div>
+                <div><label className="field-label">Heure</label><input type="time" value={editSession.session_time||''} onChange={e=>setEditSession(p=>({...p,session_time:e.target.value}))}/></div>
+              </div>
+              <div>
+                <label className="field-label">Muscle</label>
+                <select value={(editSession.muscle||'').split('+')[0]} onChange={e=>setEditSession(p=>({...p,muscle:e.target.value}))}>
+                  {Object.keys(MUSCLE_LABELS).map(m=><option key={m} value={m}>{MUSCLE_LABELS[m]}</option>)}
+                </select>
+              </div>
+              <div><label className="field-label">Notes</label><textarea value={editSession.notes||''} onChange={e=>setEditSession(p=>({...p,notes:e.target.value}))} rows={2} style={{resize:'none'}}/></div>
+              {editSession.exercises.map((ex,ei)=>(
+                <div key={ei} style={{background:'var(--s2)',borderRadius:12,padding:12,border:'1px solid var(--border)'}}>
+                  <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>{ex.name}</div>
+                  {ex.sets.map((st,si)=>(
+                    <div key={si} style={{display:'grid',gridTemplateColumns:'30px 1fr 1fr',gap:6,marginBottom:4,alignItems:'center'}}>
+                      <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
+                      <input type="number" value={st.r} onChange={e=>updateEditSet(ei,si,'r',e.target.value)} placeholder="Reps" style={{padding:'6px',fontSize:13}}/>
+                      <input type="number" value={st.w} onChange={e=>updateEditSet(ei,si,'w',e.target.value)} placeholder="kg" step="0.5" style={{padding:'6px',fontSize:13}}/>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <button className="btn-primary" onClick={saveEdit} disabled={saving}>{saving?'⏳ Sauvegarde...':'💾 Sauvegarder'}</button>
+            </div>
+            <button className="btn-secondary" onClick={()=>setEditSession(null)} style={{marginTop:10}}>Annuler</button>
+          </div>
+        </div>
+      )}
+      {shareSession && <ShareStory session={shareSession} user={currentUser} onClose={()=>setShareSession(null)} />}
+    </div>
+  )
+}

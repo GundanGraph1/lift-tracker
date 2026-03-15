@@ -67,9 +67,33 @@ export default function LoginScreen() {
     reader.readAsDataURL(file)
   }
 
+  // Liste de mots interdits dans les pseudos
+  const BANNED_WORDS = [
+    'hitler','nazi','heil','nigger','nigga','nègre','pédophile','pedophile',
+    'pedo','isis','daesh','террорист','admin','pornhub','xxx','sex','porn',
+    'fuck','putain','fdp','connard','enculé','salope','pute','merde',
+  ]
+
+  function checkBannedWords(username) {
+    const lower = username.toLowerCase().replace(/[^a-z0-9]/g,'')
+    return BANNED_WORDS.some(w => lower.includes(w.replace(/[^a-z0-9]/g,'')))
+  }
+
   async function createProfile() {
     if (!newUsername.trim()) { showToast('Entre un pseudo !', 'var(--orange)'); return }
     if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) { showToast('PIN = 4 chiffres !', 'var(--orange)'); return }
+
+    // Vérification mots interdits
+    if (checkBannedWords(newUsername)) {
+      showToast('❌ Ce pseudo n\'est pas autorisé', 'var(--red)'); return
+    }
+
+    // Vérification pseudo unique (insensible à la casse)
+    const alreadyExists = users.some(u => u.username.trim().toLowerCase() === newUsername.trim().toLowerCase())
+    if (alreadyExists) {
+      showToast('❌ Ce pseudo est déjà pris !', 'var(--orange)'); return
+    }
+
     setCreating(true)
     let avatarUrl = '💪'
     if (newPhotoFile) {
@@ -138,6 +162,13 @@ export default function LoginScreen() {
           <div>
             <label className="field-label">Pseudo</label>
             <input value={newUsername} onChange={e => setNewUsername(e.target.value)} placeholder="Ex: Gundan" maxLength={20} />
+            {newUsername.trim().length >= 2 && (() => {
+              const taken = users.some(u => u.username.trim().toLowerCase() === newUsername.trim().toLowerCase())
+              const banned = checkBannedWords(newUsername)
+              if (banned) return <div style={{fontSize:11,color:'var(--red)',marginTop:3}}>❌ Pseudo non autorisé</div>
+              if (taken) return <div style={{fontSize:11,color:'var(--orange)',marginTop:3}}>❌ Pseudo déjà pris</div>
+              return <div style={{fontSize:11,color:'var(--green)',marginTop:3}}>✅ Pseudo disponible</div>
+            })()}
           </div>
           <div>
             <label className="field-label">Code PIN (4 chiffres)</label>

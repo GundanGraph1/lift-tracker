@@ -1,14 +1,30 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { db } from '../../../lib/supabase'
-import { useStore } from '../../../lib/store'
+import { useStore, actions } from '../../../lib/store'
 import ShareStory from '../ShareStory'
 import { MUSCLE_LABELS, BADGES, normalize } from '../../../lib/constants'
+import { showToast } from '../Toast'
 
 const isBW = (name) => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest')
 
 export default function FeedPage() {
   const currentUser = useStore(s => s.currentUser)
+  const [copyingSession, setCopyingSession] = useState(null)
+  const [copyPresetName, setCopyPresetName] = useState('')
+  const [copySaving, setCopySaving] = useState(false)
+
+  async function saveSessionAsPreset(session) {
+    const name = copyPresetName.trim() || `Séance de ${items.users?.find(u=>u.id===session.user_id)?.username||'?'}`
+    setCopySaving(true)
+    const exos = (session.exercises||[]).map(e=>({name:e.name,sets:(e.sets||[]).map(s=>({r:s.r,w:s.w}))}))
+    const { data } = await db.from('presets').select('position').eq('user_id',currentUser.id).order('position',{ascending:false}).limit(1)
+    const maxPos = data?.[0]?.position+1 || 0
+    const { data: newPreset } = await db.from('presets').insert([{user_id:currentUser.id,name,muscle:session.muscle,exercises:JSON.stringify(exos),position:maxPos}]).select().single()
+    if (newPreset) actions.setPresets([...(useStore.getState?.()?.presets||[]), newPreset])
+    setCopySaving(false); setCopyingSession(null); setCopyPresetName('')
+    showToast(`✅ Preset "${name}" créé !`)
+  }
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -187,10 +203,21 @@ export default function FeedPage() {
               )}
               <div style={{display:'flex',alignItems:'center',gap:8}}>
                 {s.user_id===currentUser?.id&&<button onClick={e=>{e.stopPropagation();setShareSession(s)}} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>{"📸"}</button>}
+                <button onClick={e=>{e.stopPropagation();setCopyingSession(copyingSession?.id===s.id?null:s);setCopyPresetName('')}} style={{background:copyingSession?.id===s.id?'rgba(96,165,250,.15)':'var(--s3)',border:`1px solid ${copyingSession?.id===s.id?'rgba(96,165,250,.4)':'var(--border)'}`,borderRadius:8,padding:'5px 10px',color:copyingSession?.id===s.id?'#60a5fa':'var(--text2)',fontSize:11,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>📋 Copier</button>
                 <button onClick={()=>setExpanded(p=>({...p,[s.id]:!p[s.id]}))} style={{background:'none',border:'none',color:isExpanded?'var(--red)':'var(--text3)',fontSize:11,cursor:'pointer',padding:'0 0 8px',fontFamily:'var(--fb)'}}>
                   {isExpanded?'▲ Masquer le détail':'▼ Voir le détail'}
                 </button>
               </div>
+              {copyingSession?.id===s.id&&(
+                <div style={{padding:10,background:'rgba(96,165,250,0.06)',border:'1px solid rgba(96,165,250,0.2)',borderRadius:10,marginBottom:8}}>
+                  <div style={{fontSize:11,color:'#60a5fa',fontWeight:700,marginBottom:8}}>📋 Copier cette séance en preset</div>
+                  <div style={{display:'flex',gap:6}}>
+                    <input value={copyPresetName} onChange={e=>setCopyPresetName(e.target.value)} placeholder={`Séance de ${items.users?.find(u=>u.id===s.user_id)?.username||'?'}`} style={{flex:1,padding:'7px 10px',fontSize:12,background:'var(--s1)',border:'1px solid rgba(96,165,250,0.3)',borderRadius:8,color:'var(--text1)',fontFamily:'var(--fb)'}}/>
+                    <button onClick={()=>saveSessionAsPreset(s)} disabled={copySaving} style={{background:'#3b82f6',border:'none',borderRadius:8,padding:'7px 14px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>{copySaving?'⏳':'✅'}</button>
+                    <button onClick={()=>setCopyingSession(null)} style={{background:'var(--s3)',border:'none',borderRadius:8,padding:'7px 10px',color:'var(--text2)',fontSize:12,cursor:'pointer'}}>✕</button>
+                  </div>
+                </div>
+              )}
               <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:10,borderTop:'1px solid var(--border)'}}>
                 {EMOJIS.map(emoji=>{
                   const count=reactionGroups[emoji]||0

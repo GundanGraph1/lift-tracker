@@ -15,6 +15,9 @@ export default function StatsPage() {
   const [prWeight, setPrWeight] = useState('')
   const [prDate, setPrDate] = useState(new Date().toISOString().split('T')[0])
   const [savingPR, setSavingPR] = useState(false)
+  const [prCustom, setPrCustom] = useState(false)
+  const [prCustomSearch, setPrCustomSearch] = useState('')
+  const [prCustomResults, setPrCustomResults] = useState([])
   const [progEx, setProgEx] = useState('')
   const [progSearch, setProgSearch] = useState('')
   const [progResults, setProgResults] = useState([])
@@ -223,12 +226,43 @@ export default function StatsPage() {
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               <div>
                 <label className="field-label">Exercice</label>
-                <select value={prExercise} onChange={e=>setPrExercise(e.target.value)}>
-                  <option value="">— Choisir —</option>
-                  <option value="Développé Couché (Bench Press)">🏋️ Bench Press</option>
-                  <option value="Squat">🦵 Squat</option>
-                  <option value="Soulevé de terre (Deadlift)">⛓️ Deadlift</option>
-                </select>
+                {/* 3 natifs en priorité */}
+                <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:8}}>
+                  {['Développé Couché (Bench Press)','Squat','Soulevé de terre (Deadlift)'].map(ex=>(
+                    <button key={ex} onClick={()=>{setPrExercise(ex);setPrCustom(false);setPrCustomSearch('')}}
+                      style={{background:prExercise===ex?'rgba(255,60,60,.2)':'var(--s3)',border:`1px solid ${prExercise===ex?'var(--red)':'var(--border)'}`,borderRadius:10,padding:'8px 14px',color:prExercise===ex?'var(--red)':'var(--text)',fontSize:13,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600,textAlign:'left',transition:'all .15s'}}>
+                      {ex==='Développé Couché (Bench Press)'?'🏋️ Bench Press':ex==='Squat'?'🦵 Squat':'⛓️ Deadlift'}
+                    </button>
+                  ))}
+                </div>
+                {/* Autre exercice custom */}
+                <div style={{borderTop:'1px solid var(--border)',paddingTop:8}}>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:6}}>Autre exercice :</div>
+                  <input value={prCustomSearch} onChange={e=>{setPrCustom(true);searchCustomEx(e.target.value);setPrExercise(e.target.value)}}
+                    placeholder="Cherche dans tes séances..." style={{width:'100%',boxSizing:'border-box'}}/>
+                  {prCustomResults.length>0&&(
+                    <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:10,marginTop:4,overflow:'hidden'}}>
+                      {prCustomResults.map(n=>(
+                        <div key={n} onClick={()=>{setPrExercise(n);setPrCustomSearch(n);setPrCustomResults([])}}
+                          style={{padding:'8px 14px',cursor:'pointer',fontSize:13,borderBottom:'1px solid var(--border)'}}
+                          onMouseOver={e=>e.currentTarget.style.background='var(--s3)'}
+                          onMouseOut={e=>e.currentTarget.style.background=''}>{n}</div>
+                      ))}
+                    </div>
+                  )}
+                  {prCustomSearch.length>1&&prCustomResults.length===0&&!['Développé Couché (Bench Press)','Squat','Soulevé de terre (Deadlift)'].includes(prExercise)&&(
+                    <div style={{marginTop:6,padding:'8px 12px',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:10}}>
+                      <div style={{fontSize:12,color:'var(--text2)',marginBottom:6}}>Exercice introuvable dans tes séances ?</div>
+                      <button onClick={()=>{setPrExercise(prCustomSearch);setPrCustomResults([])}}
+                        style={{background:'rgba(59,130,246,.2)',border:'1px solid rgba(59,130,246,.4)',borderRadius:8,padding:'6px 12px',color:'#60a5fa',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:700}}>
+                        ➕ Créer "{prCustomSearch}"
+                      </button>
+                    </div>
+                  )}
+                  {prExercise&&!['Développé Couché (Bench Press)','Squat','Soulevé de terre (Deadlift)'].includes(prExercise)&&(
+                    <div style={{fontSize:11,color:'var(--green)',marginTop:4}}>✓ {prExercise}</div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="field-label">Poids (kg)</label>

@@ -26,6 +26,10 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [saving, setSaving] = useState(false)
   const [showPresets, setShowPresets] = useState(false)
   const [presetName, setPresetName] = useState('')
+  const [sharePresetId, setSharePresetId] = useState(null)
+  const [importCode, setImportCode] = useState('')
+  const [showImport, setShowImport] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
   const [restTimer, setRestTimer] = useState(null)
   const [restLeft, setRestLeft] = useState(0)
   const restRef = useRef(null)
@@ -128,6 +132,29 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     const exos = exercises.map(e=>({name:e.name,sets:e.sets.map(s=>({r:s.r,w:s.w}))}))
     await db.from('presets').insert([{user_id:currentUser.id,name:presetName,muscle:muscles.join('+'),exercises:JSON.stringify(exos)}])
     showToast('✅ Preset sauvegardé !'); setPresetName(''); onSaved()
+  }
+
+  function getShareCode(preset) {
+    // Encode preset as base64 JSON
+    const data = { name: preset.name, muscle: preset.muscle, exercises: preset.exercises }
+    return btoa(unescape(encodeURIComponent(JSON.stringify(data))))
+  }
+
+  async function importPreset() {
+    if (!importCode.trim()) return
+    setImportLoading(true)
+    try {
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(importCode.trim()))))
+      if (!decoded.name || !decoded.exercises) throw new Error()
+      await db.from('presets').insert([{user_id:currentUser.id, name:decoded.name+' (importé)', muscle:decoded.muscle||'', exercises:JSON.stringify(decoded.exercises)}])
+      const { data } = await db.from('presets').select('*').eq('user_id', currentUser.id)
+      actions.setPresets(data||[])
+      setImportCode(''); setShowImport(false)
+      showToast('✅ Preset importé !')
+    } catch(e) {
+      showToast('❌ Code invalide', 'var(--red)')
+    }
+    setImportLoading(false)
   }
 
   function loadPreset(preset) {
@@ -243,13 +270,38 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           <div style={{fontSize:13,fontWeight:700,marginBottom:12,color:'var(--text2)'}}>MES PRESETS</div>
           {presets.length===0 && <div style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>Aucun preset</div>}
           {presets.map(p => (
-            <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
-              <div><div style={{fontSize:13,fontWeight:600}}>{p.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div></div>
-              <button onClick={()=>loadPreset(p)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Charger</button>
+            <div key={p.id} style={{padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div><div style={{fontSize:13,fontWeight:600}}>{p.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div></div>
+                <div style={{display:'flex',gap:6}}>
+                  <button onClick={()=>setSharePresetId(sharePresetId===p.id?null:p.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔗 Partager</button>
+                  <button onClick={()=>loadPreset(p)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Charger</button>
+                </div>
+              </div>
+              {sharePresetId===p.id&&(
+                <div style={{marginTop:8,padding:10,background:'var(--s1)',borderRadius:10,border:'1px solid var(--border)'}}>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:6}}>Copie ce code et envoie-le à tes amis :</div>
+                  <div style={{display:'flex',gap:6}}>
+                    <input readOnly value={getShareCode(p)} style={{flex:1,fontSize:10,padding:'6px 8px',background:'var(--s3)',color:'var(--text2)',borderRadius:6,border:'1px solid var(--border)',fontFamily:'monospace'}}/>
+                    <button onClick={()=>{navigator.clipboard.writeText(getShareCode(p));showToast('✅ Code copié !')}} style={{background:'var(--green)',border:'none',borderRadius:8,padding:'6px 10px',color:'white',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>Copier</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
+          {/* Import preset */}
+          <div style={{marginTop:10,borderTop:'1px solid var(--border)',paddingTop:10}}>
+            {!showImport
+              ? <button onClick={()=>setShowImport(true)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',padding:0}}>📥 Importer le preset d'un ami</button>
+              : <div style={{display:'flex',gap:6}}>
+                  <input value={importCode} onChange={e=>setImportCode(e.target.value)} placeholder="Colle le code ici..." style={{flex:1,fontSize:11,padding:'7px 10px',fontFamily:'monospace'}}/>
+                  <button onClick={importPreset} disabled={importLoading} style={{background:'var(--blue)',border:'none',borderRadius:8,padding:'7px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>{importLoading?'⏳':'📥'}</button>
+                  <button onClick={()=>{setShowImport(false);setImportCode('')}} style={{background:'var(--s3)',border:'none',borderRadius:8,padding:'7px 10px',color:'var(--text2)',fontSize:12,cursor:'pointer'}}>✕</button>
+                </div>
+            }
+          </div>
           {exercises.length > 0 && (
-            <div style={{marginTop:12,display:'flex',gap:8}}>
+            <div style={{marginTop:10,display:'flex',gap:8}}>
               <input value={presetName} onChange={e=>setPresetName(e.target.value)} placeholder="Nom du preset..." style={{flex:1,padding:'8px 12px',fontSize:13}}/>
               <button onClick={savePreset} style={{background:'var(--green)',border:'none',borderRadius:8,padding:'8px 14px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Sauver</button>
             </div>

@@ -257,7 +257,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillText(user?.username||'', avCX + 72, footerY + 62)
       ctx.font = '500 30px "Barlow", sans-serif'
       ctx.fillStyle = 'rgba(255,255,255,0.35)'
-      ctx.fillText('lifttracker.vercel.app', avCX + 72, footerY + 105)
+      ctx.fillText('lift-tracker-two.vercel.app', avCX + 72, footerY + 105)
     }
 
     drawAvatar()
@@ -301,29 +301,34 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       const isAndroid = /Android/i.test(navigator.userAgent)
       const isMobile = isIOS || isAndroid
 
-      // Sur mobile : télécharge l'image puis ouvre Instagram Stories
-      if (isMobile) {
-        const blobUrl = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = blobUrl
-        a.download = 'lift-tracker-story.png'
-        a.click()
-        URL.revokeObjectURL(blobUrl)
-        // Ouvre Instagram Stories après que l'image soit téléchargée
-        setTimeout(() => {
-          window.location.href = 'instagram://story-camera'
-        }, 1000)
-        setDownloading(false)
-        return
+      // Sur mobile : Web Share API avec fichier → donne accès direct à Instagram Stories
+      if (isMobile && navigator.canShare) {
+        const file = new File([blob], 'lift-story.png', { type: 'image/png' })
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Ma séance Lift Tracker',
+            })
+            setDownloading(false)
+            return
+          } catch (err) {
+            // Annulé par l'utilisateur ou refusé — on fallback sur téléchargement
+            if (err.name === 'AbortError') { setDownloading(false); return }
+          }
+        }
       }
 
-      // PC : téléchargement direct
-      const url = URL.createObjectURL(blob)
+      // Fallback : téléchargement + ouvrir Instagram
+      const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
+      a.href = blobUrl
       a.download = 'lift-tracker-story.png'
       a.click()
-      URL.revokeObjectURL(url)
+      URL.revokeObjectURL(blobUrl)
+      if (isMobile) {
+        setTimeout(() => { window.location.href = 'instagram://story-camera' }, 1200)
+      }
       setDownloading(false)
     }, 'image/png')
   }

@@ -31,6 +31,8 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [showImport, setShowImport] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
   const [localPresets, setLocalPresets] = useState(null)
+  const [editingPreset, setEditingPreset] = useState(null) // preset en cours d'édition
+  const [editPresetName, setEditPresetName] = useState('')
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 })
@@ -53,6 +55,42 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     }, 1000)
     return () => clearInterval(restRef.current)
   }, [restLeft])
+
+  // Clé de brouillon unique par utilisateur
+  const draftKey = currentUser ? `lift_draft_${currentUser.id}` : null
+
+  // Restaurer le brouillon au chargement
+  useEffect(() => {
+    if (!draftKey) return
+    try {
+      const saved = localStorage.getItem(draftKey)
+      if (!saved) return
+      const draft = JSON.parse(saved)
+      if (draft.exercises?.length > 0 || draft.notes) {
+        if (draft.date) setDate(draft.date)
+        if (draft.time) setTime(draft.time)
+        if (draft.muscles?.length) setMuscles(draft.muscles)
+        if (draft.notes) setNotes(draft.notes)
+        if (draft.exercises?.length) setExercises(draft.exercises)
+        showToast('📝 Brouillon restauré !', 'var(--blue)')
+      }
+    } catch {}
+  }, [draftKey])
+
+  // Sauvegarder le brouillon à chaque changement
+  useEffect(() => {
+    if (!draftKey) return
+    if (exercises.length === 0 && !notes) {
+      localStorage.removeItem(draftKey)
+      return
+    }
+    const draft = { date, time, muscles, notes, exercises }
+    localStorage.setItem(draftKey, JSON.stringify(draft))
+  }, [date, time, muscles, notes, exercises, draftKey])
+
+  function clearDraft() {
+    if (draftKey) localStorage.removeItem(draftKey)
+  }
 
   function startRest(secs) { clearInterval(restRef.current); setRestLeft(secs); setRestTimer(secs) }
 
@@ -165,6 +203,19 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   function resetForm() {
     setDate(new Date().toISOString().split('T')[0]); setTime(new Date().toTimeString().slice(0,5))
     setMuscles(['Dos']); setNotes(''); setExercises([])
+    clearDraft()
+  }
+
+  async function updatePreset(preset) {
+    // Sauvegarde le preset avec les exercices actuels de la séance
+    const exos = exercises.map(e=>({name:e.name,sets:e.sets.map(s=>({r:s.r,w:s.w}))}))
+    const newName = editPresetName.trim() || preset.name
+    await db.from('presets').update({ name: newName, muscle: muscles.join('+'), exercises: JSON.stringify(exos) }).eq('id', preset.id)
+    await actions.loadPresets(currentUser.id)
+    setLocalPresets(null)
+    setEditingPreset(null)
+    setEditPresetName('')
+    showToast(`✅ Preset "${newName}" mis à jour !`)
   }
 
   async function savePreset() {
@@ -197,17 +248,42 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     savePresetsOrder(ordered)
   }
 
-  // Which index the ghost is hovering over, based on Y position
+  // Which index the ghost is hovering over — basé sur le centre de chaque item
+  // Hysteresis : on ne change d'index que si on a franchi le milieu + 20% de marge
+  // pour éviter l'oscillation quand le fantôme est entre deux items
   function getHoverIdx(y) {
-    const els = document.querySelectorAll('[data-preset-idx]')
-    let best = dragIdxRef.current
+    const els = Array.from(document.querySelectorAll('[data-preset-idx]'))
+    if (!els.length) return dragIdxRef.current
+    const current = dragOverIdxRef.current ?? dragIdxRef.current
+
+    let best = current
+    let bestDist = Infinity
+
     els.forEach(el => {
+      const idx = parseInt(el.getAttribute('data-preset-idx'))
+      if (idx === dragIdxRef.current) return // skip l'item draggé
       const rect = el.getBoundingClientRect()
       const mid = rect.top + rect.height / 2
-      if (y >= rect.top - 10 && y <= rect.bottom + 10) {
-        best = parseInt(el.getAttribute('data-preset-idx'))
+      const dist = Math.abs(y - mid)
+
+      // Zone de déclenchement : seulement si on a passé 30% dans l'item suivant
+      const threshold = rect.height * 0.3
+      if (dist < bestDist) {
+        // Ne changer que si on est clairement dans une nouvelle zone
+        if (idx !== current) {
+          const isMovingInto = (idx > current && y > rect.top + threshold) ||
+                               (idx < current && y < rect.bottom - threshold)
+          if (isMovingInto) {
+            bestDist = dist
+            best = idx
+          }
+        } else {
+          bestDist = dist
+          best = idx
+        }
       }
     })
+
     return best
   }
 
@@ -259,10 +335,13 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     setDragIdx(i); setDragOverIdx(i)
     setGhostLabel(sortedPresets[i]?.name || '')
     setGhostPos({ x: t.clientX, y: t.clientY })
+    // Bloquer le scroll de la page pendant le drag (passive:false obligatoire sur mobile)
+    document.addEventListener('touchmove', handleTouchMoveGlobal, { passive: false })
+    document.addEventListener('touchend', handleTouchEndGlobal)
   }
-  function onTouchMove(e) {
+  function handleTouchMoveGlobal(e) {
     if (touchStateRef.current.startIdx === null) return
-    e.preventDefault()
+    e.preventDefault() // bloque le scroll
     const t = e.touches[0]
     setGhostPos({ x: t.clientX, y: t.clientY })
     const newOver = getHoverIdx(t.clientY)
@@ -272,12 +351,16 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       setDragOverIdx(newOver)
     }
   }
-  function onTouchEnd() {
+  function handleTouchEndGlobal() {
     reorder(touchStateRef.current.startIdx, touchStateRef.current.lastOverIdx)
     touchStateRef.current = { startIdx: null, lastOverIdx: null }
     dragIdxRef.current = null; dragOverIdxRef.current = null
     setDragIdx(null); setDragOverIdx(null)
+    document.removeEventListener('touchmove', handleTouchMoveGlobal)
+    document.removeEventListener('touchend', handleTouchEndGlobal)
   }
+  function onTouchMove(e) {} // géré par handleTouchMoveGlobal
+  function onTouchEnd() {} // géré par handleTouchEndGlobal
 
   async function importPreset() {
     if (!importCode.trim()) return
@@ -310,6 +393,12 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       <div style={{marginBottom:20}}>
         <div className="page-title">SAISIE</div>
         <div className="page-sub">Nouvelle séance</div>
+        {exercises.length > 0 && (
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:8,padding:'7px 12px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:10}}>
+            <span style={{fontSize:12,color:'#60a5fa'}}>📝 Brouillon en cours — {exercises.length} exo{exercises.length>1?'s':''}</span>
+            <button onClick={()=>{resetForm();showToast('🗑 Brouillon effacé')}} style={{background:'none',border:'none',color:'var(--text3)',fontSize:11,cursor:'pointer',fontFamily:'var(--fb)'}}>Effacer</button>
+          </div>
+        )}
         <hr className="page-divider" />
       </div>
 
@@ -499,6 +588,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                 </div>
                 <div style={{display:'flex',gap:6}}>
                   <button onClick={()=>setSharePresetId(sharePresetId===p.id?null:p.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔗</button>
+                  <button onClick={()=>{loadPreset(p);setEditingPreset(p);setEditPresetName(p.name)}} style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>✏️</button>
                   <button onClick={()=>loadPreset(p)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Charger</button>
                   <button onClick={()=>deletePreset(p.id)} style={{background:'none',border:'1px solid rgba(239,68,68,.2)',borderRadius:8,padding:'5px 10px',color:'var(--red)',fontSize:13,cursor:'pointer'}}>🗑</button>
                 </div>
@@ -526,7 +616,17 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                 </div>
             }
           </div>
-          {exercises.length > 0 && (
+          {editingPreset && (
+            <div style={{marginTop:10,padding:12,background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.3)',borderRadius:12}}>
+              <div style={{fontSize:11,color:'#fbbf24',fontWeight:700,marginBottom:8}}>✏️ MODE ÉDITION — les exercices chargés seront sauvegardés dans ce preset</div>
+              <div style={{display:'flex',gap:8}}>
+                <input value={editPresetName} onChange={e=>setEditPresetName(e.target.value)} placeholder={editingPreset.name} style={{flex:1,padding:'8px 12px',fontSize:13,border:'1px solid rgba(251,191,36,0.4)',background:'var(--s1)'}}/>
+                <button onClick={()=>updatePreset(editingPreset)} style={{background:'#fbbf24',border:'none',borderRadius:8,padding:'8px 14px',color:'#000',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>💾 Sauver</button>
+                <button onClick={()=>{setEditingPreset(null);setEditPresetName('')}} style={{background:'var(--s3)',border:'none',borderRadius:8,padding:'8px 10px',color:'var(--text2)',fontSize:12,cursor:'pointer'}}>✕</button>
+              </div>
+            </div>
+          )}
+          {!editingPreset && exercises.length > 0 && (
             <div style={{marginTop:10,display:'flex',gap:8}}>
               <input value={presetName} onChange={e=>setPresetName(e.target.value)} placeholder="Nom du preset..." style={{flex:1,padding:'8px 12px',fontSize:13}}/>
               <button onClick={savePreset} style={{background:'var(--green)',border:'none',borderRadius:8,padding:'8px 14px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Sauver</button>

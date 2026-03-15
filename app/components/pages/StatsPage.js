@@ -21,6 +21,8 @@ export default function StatsPage() {
   const [progEx, setProgEx] = useState('')
   const [progSearch, setProgSearch] = useState('')
   const [progResults, setProgResults] = useState([])
+  const [progMode, setProgMode] = useState('exercise') // 'exercise' | 'muscle'
+  const [progMuscle, setProgMuscle] = useState('')
 
   useEffect(() => { checkBadges() }, [sessions, userPRs])
 
@@ -77,11 +79,23 @@ export default function StatsPage() {
 
   function filterProgSearch(q) {
     setProgSearch(q)
-    if (!q.trim()) { setProgResults([]); return }
+    setProgEx(q) // update progEx immediately so typing works without clicking
+    if (!q.trim()) { setProgResults([]); setProgEx(''); return }
     const nq = normalize(q)
     const names = new Set()
     sessions.forEach(s=>(s.exercises||[]).forEach(e=>names.add(e.name)))
     setProgResults([...names].filter(n=>normalize(n).includes(nq)).slice(0,6))
+  }
+
+  function getMuscleProgData(muscle) {
+    const pts = []
+    const sorted = [...sessions].sort((a,b)=>a.session_date.localeCompare(b.session_date))
+    for (const s of sorted) {
+      if (!(s.muscle||'').split('+').includes(muscle)) continue
+      const vol = (s.exercises||[]).reduce((a,ex)=>a+ex.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0),0)
+      if (vol > 0) pts.push({ date: s.session_date, w: vol })
+    }
+    return pts
   }
 
   function getProgData(name) {

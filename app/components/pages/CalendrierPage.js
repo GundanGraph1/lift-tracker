@@ -70,13 +70,20 @@ export default function CalendrierPage() {
           const color=daySessions.length?MUSCLE_COLORS[daySessions[0].muscle]||'var(--red)':null
           return (
             <div key={day} onClick={()=>setSelected(isSelected?null:day)} style={{
-              aspectRatio:'1',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',cursor:daySessions.length?'pointer':'default',
+              aspectRatio:'1',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:daySessions.length?'pointer':'default',
               background:isSelected?'var(--red)':color?`${color}33`:'var(--s2)',
               border:`1px solid ${isSelected?'var(--red)':color?color+'55':'var(--border)'}`,
               fontSize:12,fontWeight:daySessions.length?700:400,
               color:isSelected?'white':daySessions.length?color:'var(--text3)',
-              transition:'all 0.15s'
-            }}>{day}</div>
+              transition:'all 0.15s', padding:2, gap:1
+            }}>
+              <span>{day}</span>
+              {daySessions.length>0&&(
+                <span style={{fontSize:7,fontWeight:700,letterSpacing:0.3,textAlign:'center',lineHeight:1.1,opacity:0.85,maxWidth:'100%',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 1px'}}>
+                  {daySessions[0].muscle?daySessions[0].muscle.split('+').map(m=>MUSCLE_LABELS[m]||m).join('+').slice(0,8):'💪'}
+                </span>
+              )}
+            </div>
           )
         })}
       </div>

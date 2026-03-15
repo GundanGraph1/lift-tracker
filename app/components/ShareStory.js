@@ -36,229 +36,224 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
 
   function draw(ctx, canvas) {
     const W = canvas.width, H = canvas.height
+    // Safe zone: Instagram crops ~60px top/bottom, ~30px sides on some phones
+    // We use 100px margin on all sides to be safe
+    const M = 100 // margin left/right
+    const CONTENT_W = W - M * 2
 
     // ── BACKGROUND ──
     ctx.fillStyle = '#0a0a0a'
     ctx.fillRect(0, 0, W, H)
 
-    // Subtle grid lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)'
+    // Subtle grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.025)'
     ctx.lineWidth = 1
-    for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke() }
-    for (let y = 0; y < H; y += 60) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke() }
+    for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke() }
+    for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke() }
 
-    // Top accent glow
-    const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 600)
-    glow.addColorStop(0, `rgba(${hex2rgb(muscleColor)},0.18)`)
+    // Top glow
+    const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 700)
+    glow.addColorStop(0, `rgba(${hex2rgb(muscleColor)},0.2)`)
     glow.addColorStop(1, 'transparent')
-    ctx.fillStyle = glow
-    ctx.fillRect(0, 0, W, H)
+    ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H)
 
     // Bottom glow
-    const glow2 = ctx.createRadialGradient(W/2, H, 0, W/2, H, 500)
-    glow2.addColorStop(0, `rgba(${hex2rgb(muscleColor)},0.10)`)
+    const glow2 = ctx.createRadialGradient(W/2, H, 0, W/2, H, 600)
+    glow2.addColorStop(0, `rgba(${hex2rgb(muscleColor)},0.12)`)
     glow2.addColorStop(1, 'transparent')
-    ctx.fillStyle = glow2
-    ctx.fillRect(0, 0, W, H)
+    ctx.fillStyle = glow2; ctx.fillRect(0, 0, W, H)
 
-    // ── HEADER — LOGO ──
-    ctx.font = '900 72px "Barlow Condensed", sans-serif'
+    // ── HEADER (y: 120 to 380) ──
+    // Logo
+    ctx.font = '900 88px "Barlow Condensed", sans-serif'
     ctx.fillStyle = muscleColor
-    ctx.letterSpacing = '6px'
-    ctx.fillText('LIFT TRACKER', 80, 130)
+    ctx.textAlign = 'left'
+    ctx.fillText('LIFT TRACKER', M, 210)
 
     // Date
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
-    ctx.font = '500 34px "Barlow", sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    ctx.fillText(dateStr.toUpperCase(), 80, 185)
+    ctx.font = '500 36px "Barlow", sans-serif'
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    ctx.fillText(dateStr.toUpperCase(), M, 270)
 
-    // Divider line
-    ctx.strokeStyle = `rgba(${hex2rgb(muscleColor)},0.4)`
+    // Divider
+    ctx.strokeStyle = `rgba(${hex2rgb(muscleColor)},0.5)`
     ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(80, 215); ctx.lineTo(W-80, 215); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(M, 300); ctx.lineTo(W-M, 300); ctx.stroke()
 
-    // ── MUSCLE BADGE ──
-    const badgeY = 260
+    // ── MUSCLE BADGE (y: 320) ──
     const badgeText = muscles.join(' + ').toUpperCase()
-    ctx.font = '800 52px "Barlow Condensed", sans-serif'
+    ctx.font = '800 56px "Barlow Condensed", sans-serif'
     const bw = ctx.measureText(badgeText).width
-    const bpad = 32
-    roundRect(ctx, 80, badgeY, bw+bpad*2, 80, 16)
-    ctx.fillStyle = `rgba(${hex2rgb(muscleColor)},0.15)`
-    ctx.fill()
-    ctx.strokeStyle = muscleColor
-    ctx.lineWidth = 2
-    ctx.stroke()
+    const bpad = 36
+    roundRect(ctx, M, 320, bw + bpad*2, 90, 18)
+    ctx.fillStyle = `rgba(${hex2rgb(muscleColor)},0.15)`; ctx.fill()
+    ctx.strokeStyle = muscleColor; ctx.lineWidth = 2; ctx.stroke()
     ctx.fillStyle = muscleColor
-    ctx.fillText(badgeText, 80+bpad, badgeY+56)
+    ctx.fillText(badgeText, M + bpad, 385)
 
-    // ── STATS ROW ──
-    const statsY = 420
+    // ── STATS ROW (y: 450) ──
     const stats = [
       { label: 'VOLUME', value: totalVol >= 1000 ? `${(totalVol/1000).toFixed(1)}T` : `${Math.round(totalVol)}KG` },
       { label: 'SÉRIES', value: String(totalSets) },
       { label: 'EXERCICES', value: String((session.exercises||[]).length) },
     ]
-    const colW = (W - 160) / 3
+    const colW = CONTENT_W / 3
     stats.forEach((s, i) => {
-      const x = 80 + i * colW
-      // Card bg
-      roundRect(ctx, x, statsY, colW - 20, 160, 18)
-      ctx.fillStyle = 'rgba(255,255,255,0.05)'
-      ctx.fill()
-      ctx.strokeStyle = 'rgba(255,255,255,0.08)'
-      ctx.lineWidth = 1; ctx.stroke()
-      // Value
-      ctx.font = `900 ${s.value.length > 4 ? 56 : 68}px "Barlow Condensed", sans-serif`
+      const x = M + i * colW
+      roundRect(ctx, x + 8, 450, colW - 16, 170, 18)
+      ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill()
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke()
+      ctx.font = `900 ${s.value.length > 4 ? 60 : 72}px "Barlow Condensed", sans-serif`
       ctx.fillStyle = muscleColor
       ctx.textAlign = 'center'
-      ctx.fillText(s.value, x + (colW-20)/2, statsY + 100)
-      // Label
-      ctx.font = '600 26px "Barlow", sans-serif'
+      ctx.fillText(s.value, x + colW/2, 450 + 108)
+      ctx.font = '600 28px "Barlow", sans-serif'
       ctx.fillStyle = 'rgba(255,255,255,0.4)'
-      ctx.fillText(s.label, x + (colW-20)/2, statsY + 142)
+      ctx.fillText(s.label, x + colW/2, 450 + 152)
     })
     ctx.textAlign = 'left'
 
-    // ── EXERCISES ──
-    const exY = 640
-    ctx.font = '700 30px "Barlow", sans-serif'
+    // ── EXERCISES (y: 670 onwards) ──
+    let curY = 670
+    ctx.font = '700 32px "Barlow", sans-serif'
     ctx.fillStyle = 'rgba(255,255,255,0.3)'
-    ctx.fillText('TOP EXERCICES', 80, exY)
+    ctx.fillText('TOP EXERCICES', M, curY)
+    curY += 20
 
-    topExos.forEach((ex, i) => {
-      const y = exY + 30 + i * 145
+    // Show up to 5 exercises, smaller cards to fit
+    const maxExos = Math.min(topExos.length, 5)
+    const exCardH = 118
+    topExos.slice(0, maxExos).forEach((ex, i) => {
+      const y = curY + i * (exCardH + 12)
       const exVol = ex.sets.reduce((a,st)=>a+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0)
       const bestSet = ex.sets.reduce((best,st) => (parseFloat(st.w)||0) > (parseFloat(best.w)||0) ? st : best, ex.sets[0]||{r:0,w:0})
 
-      // Card
-      roundRect(ctx, 80, y, W-160, 120, 16)
-      ctx.fillStyle = 'rgba(255,255,255,0.04)'
-      ctx.fill()
-      ctx.strokeStyle = 'rgba(255,255,255,0.07)'
-      ctx.lineWidth = 1; ctx.stroke()
+      roundRect(ctx, M, y, CONTENT_W, exCardH, 16)
+      ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill()
+      ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1; ctx.stroke()
 
-      // Left accent bar
-      roundRect(ctx, 80, y, 5, 120, 3)
-      ctx.fillStyle = muscleColor
-      ctx.fill()
+      // Accent bar
+      roundRect(ctx, M, y, 5, exCardH, 3)
+      ctx.fillStyle = muscleColor; ctx.fill()
 
-      // Exercise name
+      // Name (truncate if needed)
       ctx.font = '700 38px "Barlow Condensed", sans-serif'
       ctx.fillStyle = '#ffffff'
-      const nameMaxW = W - 340
+      const nameMaxW = CONTENT_W - 260
       let name = ex.name
-      while (ctx.measureText(name).width > nameMaxW && name.length > 10) name = name.slice(0,-1)
+      while (ctx.measureText(name).width > nameMaxW && name.length > 8) name = name.slice(0,-1)
       if (name !== ex.name) name += '…'
-      ctx.fillText(name, 110, y + 52)
+      ctx.fillText(name, M + 22, y + 50)
 
-      // Sets summary
+      // Sets info
       const setsStr = `${ex.sets.length} séries · max ${bestSet.w||0}kg`
-      ctx.font = '500 28px "Barlow", sans-serif'
+      ctx.font = '500 27px "Barlow", sans-serif'
       ctx.fillStyle = 'rgba(255,255,255,0.45)'
-      ctx.fillText(setsStr, 110, y + 92)
+      ctx.fillText(setsStr, M + 22, y + 88)
 
-      // Volume
+      // Volume right
       const volStr = exVol >= 1000 ? `${(exVol/1000).toFixed(1)}t` : `${Math.round(exVol)}kg`
-      ctx.font = '800 40px "Barlow Condensed", sans-serif'
+      ctx.font = '800 42px "Barlow Condensed", sans-serif'
       ctx.fillStyle = muscleColor
       ctx.textAlign = 'right'
-      ctx.fillText(volStr, W-110, y + 70)
+      ctx.fillText(volStr, W - M, y + 68)
       ctx.textAlign = 'left'
     })
 
+    curY += maxExos * (exCardH + 12) + 20
+
     // ── PRs ──
-    if (sessionPRs.length > 0) {
-      const prY = exY + 30 + topExos.length * 145 + 30
-      roundRect(ctx, 80, prY, W-160, 80 + sessionPRs.length * 70, 16)
-      ctx.fillStyle = `rgba(251,191,36,0.08)`
-      ctx.fill()
-      ctx.strokeStyle = `rgba(251,191,36,0.3)`
-      ctx.lineWidth = 1.5; ctx.stroke()
-
-      ctx.font = '700 30px "Barlow", sans-serif'
+    if (sessionPRs.length > 0 && curY < H - 350) {
+      roundRect(ctx, M, curY, CONTENT_W, 75 + sessionPRs.slice(0,2).length * 65, 16)
+      ctx.fillStyle = `rgba(251,191,36,0.08)`; ctx.fill()
+      ctx.strokeStyle = `rgba(251,191,36,0.3)`; ctx.lineWidth = 1.5; ctx.stroke()
+      ctx.font = '700 32px "Barlow", sans-serif'
       ctx.fillStyle = '#fbbf24'
-      ctx.fillText('🏆  NOUVEAUX PRs', 110, prY + 54)
-
+      ctx.fillText('🏆  NOUVEAUX PRs', M + 28, curY + 50)
       sessionPRs.slice(0,2).forEach((pr, i) => {
-        ctx.font = '600 28px "Barlow", sans-serif'
+        ctx.font = '500 28px "Barlow", sans-serif'
         ctx.fillStyle = 'rgba(255,255,255,0.7)'
-        ctx.fillText(`${pr.exercise}  ·  ${pr.weight}kg × ${pr.reps} rep`, 110, prY + 100 + i * 68)
+        ctx.fillText(`${pr.exercise}  ·  ${pr.weight}kg × ${pr.reps} rep`, M + 28, curY + 95 + i * 62)
       })
+      curY += 75 + sessionPRs.slice(0,2).length * 65 + 20
     }
 
     // ── NOTES ──
-    if (session.notes) {
-      const noteY = H - 400
-      ctx.font = 'italic 500 34px "Barlow", sans-serif'
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'
-      const note = `"${session.notes.slice(0,80)}${session.notes.length>80?'…':'"'}`
-      wrapText(ctx, note, 80, noteY, W-160, 44)
+    if (session.notes && curY < H - 330) {
+      ctx.font = 'italic 500 32px "Barlow", sans-serif'
+      ctx.fillStyle = 'rgba(255,255,255,0.3)'
+      const note = `"${session.notes.slice(0,70)}${session.notes.length>70?'…':'"'}`
+      wrapText(ctx, note, M, curY + 40, CONTENT_W, 44)
     }
 
-    // ── FOOTER ──
-    ctx.strokeStyle = `rgba(${hex2rgb(muscleColor)},0.3)`
-    ctx.lineWidth = 1
-    ctx.beginPath(); ctx.moveTo(80, H-190); ctx.lineTo(W-80, H-190); ctx.stroke()
+    // ── FOOTER (fixed at bottom, safe zone) ──
+    const footerY = H - 220
+    ctx.strokeStyle = `rgba(${hex2rgb(muscleColor)},0.35)`
+    ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.moveTo(M, footerY); ctx.lineTo(W-M, footerY); ctx.stroke()
 
-    // Avatar circle
-    const avX = 80, avY = H - 155
+    // Avatar
+    const avCX = M + 52, avCY = footerY + 75
     const drawAvatar = () => {
       ctx.save()
-      ctx.beginPath(); ctx.arc(avX+45, avY+45, 45, 0, Math.PI*2)
-      ctx.strokeStyle = muscleColor; ctx.lineWidth = 2.5; ctx.stroke()
+      ctx.beginPath(); ctx.arc(avCX, avCY, 52, 0, Math.PI*2)
+      ctx.strokeStyle = muscleColor; ctx.lineWidth = 3; ctx.stroke()
       ctx.clip()
       if (user?.avatar?.startsWith('http')) {
         const img = new Image(); img.crossOrigin = 'anonymous'
         img.onload = () => {
-          ctx.drawImage(img, avX, avY, 90, 90)
+          // object-fit: cover — crop image to fill circle without stretching
+          const r = 52
+          const iW = img.naturalWidth, iH = img.naturalHeight
+          const scale = Math.max((r*2) / iW, (r*2) / iH)
+          const dW = iW * scale, dH = iH * scale
+          const dx = avCX - r - (dW - r*2) / 2
+          const dy = avCY - r - (dH - r*2) / 2
+          ctx.drawImage(img, dx, dy, dW, dH)
           ctx.restore()
-          // Redraw text after image loads
-          ctx.font = '700 46px "Barlow Condensed", sans-serif'
-          ctx.fillStyle = '#ffffff'
-          ctx.fillText(user?.username||'', avX+105, avY+35)
-          ctx.font = '500 28px "Barlow", sans-serif'
-          ctx.fillStyle = 'rgba(255,255,255,0.35)'
-          ctx.fillText('LIFT TRACKER  ·  lifttracker.vercel.app', avX+105, avY+75)
+          drawFooterText()
           setReady(true)
         }
         img.onerror = () => {
           ctx.restore()
-          ctx.fillStyle = 'rgba(255,255,255,0.1)'
-          ctx.beginPath(); ctx.arc(avX+45, avY+45, 45, 0, Math.PI*2); ctx.fill()
-          ctx.font = '700 38px "Barlow Condensed", sans-serif'
+          ctx.beginPath(); ctx.arc(avCX, avCY, 52, 0, Math.PI*2)
+          ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill()
+          ctx.font = '700 42px "Barlow Condensed", sans-serif'
           ctx.fillStyle = 'rgba(255,255,255,0.8)'
           ctx.textAlign = 'center'
-          ctx.fillText('💪', avX+45, avY+57)
+          ctx.fillText(user?.avatar||'💪', avCX, avCY+14)
           ctx.textAlign = 'left'
+          drawFooterText()
           setReady(true)
         }
         img.src = user.avatar
-        return // setReady called after image loads
+        return
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill()
         ctx.restore()
-        ctx.font = '700 38px "Barlow Condensed", sans-serif'
+        ctx.font = '700 42px "Barlow Condensed", sans-serif'
         ctx.fillStyle = 'rgba(255,255,255,0.8)'
         ctx.textAlign = 'center'
-        ctx.fillText(user?.avatar||'💪', avX+45, avY+57)
+        ctx.fillText(user?.avatar||'💪', avCX, avCY+14)
         ctx.textAlign = 'left'
+        drawFooterText()
+        setReady(true)
       }
     }
-    drawAvatar()
 
-    // Username (always drawn, avatar image redraws on top if http)
-    if (!user?.avatar?.startsWith('http')) {
-      ctx.font = '700 46px "Barlow Condensed", sans-serif'
+    const drawFooterText = () => {
+      ctx.font = '700 48px "Barlow Condensed", sans-serif'
       ctx.fillStyle = '#ffffff'
-      ctx.fillText(user?.username||'', avX+105, avY+35)
-
-      ctx.font = '500 28px "Barlow", sans-serif'
+      ctx.fillText(user?.username||'', avCX + 72, footerY + 62)
+      ctx.font = '500 30px "Barlow", sans-serif'
       ctx.fillStyle = 'rgba(255,255,255,0.35)'
-      ctx.fillText('LIFT TRACKER  ·  lifttracker.vercel.app', avX+105, avY+75)
+      ctx.fillText('lifttracker.vercel.app', avCX + 72, footerY + 105)
+    }
 
-      setReady(true)
+    drawAvatar()
+    if (!user?.avatar?.startsWith('http')) {
+      // already called inside drawAvatar
     }
   }
 

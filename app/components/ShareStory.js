@@ -247,18 +247,19 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       }
     }
     drawAvatar()
+
+    // Username (always drawn, avatar image redraws on top if http)
     if (!user?.avatar?.startsWith('http')) {
+      ctx.font = '700 46px "Barlow Condensed", sans-serif'
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(user?.username||'', avX+105, avY+35)
 
-    // Username
-    ctx.font = '700 46px "Barlow Condensed", sans-serif'
-    ctx.fillStyle = '#ffffff'
-    ctx.fillText(user?.username||'', avX+105, avY+35)
+      ctx.font = '500 28px "Barlow", sans-serif'
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'
+      ctx.fillText('LIFT TRACKER  ·  lifttracker.vercel.app', avX+105, avY+75)
 
-    ctx.font = '500 28px "Barlow", sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.35)'
-    ctx.fillText('LIFT TRACKER  ·  lifttracker.vercel.app', avX+105, avY+75)
-
-    setReady(true)
+      setReady(true)
+    }
   }
 
   function roundRect(ctx, x, y, w, h, r) {

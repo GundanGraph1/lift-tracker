@@ -86,6 +86,26 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     showToast('✅ Exercice créé !')
   }
 
+  async function toggleFavorite(name) {
+    const ex = (customExercises||[]).find(e => normalize(e.name) === normalize(name))
+    if (ex) {
+      // Toggle existing custom exercise
+      await db.from('custom_exercises').update({is_favorite: !ex.is_favorite}).eq('id', ex.id)
+      actions.setCustomExercises((customExercises||[]).map(e => e.id===ex.id ? {...e, is_favorite: !e.is_favorite} : e))
+    } else {
+      // Create as favorite
+      const { data } = await db.from('custom_exercises').insert([{user_id: currentUser.id, name, is_favorite: true}]).select()
+      if (data && data[0]) actions.setCustomExercises([...(customExercises||[]), data[0]])
+    }
+  }
+
+  async function deletePreset(id) {
+    if (!confirm('Supprimer ce preset ?')) return
+    await db.from('presets').delete().eq('id', id)
+    actions.setPresets((presets||[]).filter(p => p.id !== id))
+    showToast('🗑 Preset supprimé')
+  }
+
   function updateSet(exId, setId, field, val) {
     setExercises(prev => prev.map(ex => ex.id!==exId ? ex : {...ex, sets: ex.sets.map(st => st.id!==setId ? st : {...st,[field]:val})}))
   }
@@ -264,9 +284,28 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           <span>🔍</span>
           <input className="ex-search-input" value={exSearch} onChange={e=>filterEx(e.target.value)} placeholder="Ajouter un exercice..." />
         </div>
+        {/* Favoris — affichés quand la recherche est vide */}
+        {!exSearch && (customExercises||[]).filter(e=>e.is_favorite).length > 0 && (
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:8}}>
+            {(customExercises||[]).filter(e=>e.is_favorite).map(e=>(
+              <button key={e.id} onClick={()=>addExercise(e.name)}
+                style={{background:'rgba(251,191,36,.12)',border:'1px solid rgba(251,191,36,.3)',borderRadius:20,padding:'5px 12px',color:'#fbbf24',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>
+                ⭐ {e.name}
+              </button>
+            ))}
+          </div>
+        )}
         {exResults.length > 0 && (
           <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12,marginTop:4,overflow:'hidden'}}>
-            {exResults.map(n => <div key={n} className="ex-result-item" onClick={()=>addExercise(n)}>{n}</div>)}
+            {exResults.map(n => {
+              const isFav = (customExercises||[]).some(e=>normalize(e.name)===normalize(n)&&e.is_favorite)
+              return (
+                <div key={n} className="ex-result-item" style={{display:'flex',alignItems:'center',justifyContent:'space-between',paddingRight:8}}>
+                  <span onClick={()=>addExercise(n)} style={{flex:1,padding:'8px 12px',cursor:'pointer'}}>{n}</span>
+                  <span onClick={e=>{e.stopPropagation();toggleFavorite(n)}} style={{cursor:'pointer',fontSize:16,opacity:isFav?1:0.3,transition:'opacity .15s'}} title="Favori">⭐</span>
+                </div>
+              )
+            })}
           </div>
         )}
         {exSearch.length > 1 && exResults.length === 0 && (
@@ -294,8 +333,9 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div><div style={{fontSize:13,fontWeight:600}}>{p.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div></div>
                 <div style={{display:'flex',gap:6}}>
-                  <button onClick={()=>setSharePresetId(sharePresetId===p.id?null:p.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔗 Partager</button>
+                  <button onClick={()=>setSharePresetId(sharePresetId===p.id?null:p.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔗</button>
                   <button onClick={()=>loadPreset(p)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Charger</button>
+                  <button onClick={()=>deletePreset(p.id)} style={{background:'none',border:'1px solid rgba(239,68,68,.2)',borderRadius:8,padding:'5px 10px',color:'var(--red)',fontSize:13,cursor:'pointer'}}>🗑</button>
                 </div>
               </div>
               {sharePresetId===p.id&&(

@@ -202,16 +202,52 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(80, H-190); ctx.lineTo(W-80, H-190); ctx.stroke()
 
-    // Avatar circle placeholder
+    // Avatar circle
     const avX = 80, avY = H - 155
-    ctx.beginPath(); ctx.arc(avX+45, avY+45, 45, 0, Math.PI*2)
-    ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill()
-    ctx.strokeStyle = muscleColor; ctx.lineWidth = 2.5; ctx.stroke()
-    ctx.font = '700 38px "Barlow Condensed", sans-serif'
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'
-    ctx.textAlign = 'center'
-    ctx.fillText((user?.avatar&&!user.avatar.startsWith('http'))?user.avatar:'💪', avX+45, avY+57)
-    ctx.textAlign = 'left'
+    const drawAvatar = () => {
+      ctx.save()
+      ctx.beginPath(); ctx.arc(avX+45, avY+45, 45, 0, Math.PI*2)
+      ctx.strokeStyle = muscleColor; ctx.lineWidth = 2.5; ctx.stroke()
+      ctx.clip()
+      if (user?.avatar?.startsWith('http')) {
+        const img = new Image(); img.crossOrigin = 'anonymous'
+        img.onload = () => {
+          ctx.drawImage(img, avX, avY, 90, 90)
+          ctx.restore()
+          // Redraw text after image loads
+          ctx.font = '700 46px "Barlow Condensed", sans-serif'
+          ctx.fillStyle = '#ffffff'
+          ctx.fillText(user?.username||'', avX+105, avY+35)
+          ctx.font = '500 28px "Barlow", sans-serif'
+          ctx.fillStyle = 'rgba(255,255,255,0.35)'
+          ctx.fillText('LIFT TRACKER  ·  lifttracker.vercel.app', avX+105, avY+75)
+          setReady(true)
+        }
+        img.onerror = () => {
+          ctx.restore()
+          ctx.fillStyle = 'rgba(255,255,255,0.1)'
+          ctx.beginPath(); ctx.arc(avX+45, avY+45, 45, 0, Math.PI*2); ctx.fill()
+          ctx.font = '700 38px "Barlow Condensed", sans-serif'
+          ctx.fillStyle = 'rgba(255,255,255,0.8)'
+          ctx.textAlign = 'center'
+          ctx.fillText('💪', avX+45, avY+57)
+          ctx.textAlign = 'left'
+          setReady(true)
+        }
+        img.src = user.avatar
+        return // setReady called after image loads
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fill()
+        ctx.restore()
+        ctx.font = '700 38px "Barlow Condensed", sans-serif'
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'
+        ctx.textAlign = 'center'
+        ctx.fillText(user?.avatar||'💪', avX+45, avY+57)
+        ctx.textAlign = 'left'
+      }
+    }
+    drawAvatar()
+    if (!user?.avatar?.startsWith('http')) {
 
     // Username
     ctx.font = '700 46px "Barlow Condensed", sans-serif'

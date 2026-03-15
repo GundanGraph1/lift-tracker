@@ -110,6 +110,7 @@ export default function HistoriquePage({ onChanged }) {
                 })}
               </div>
               <div style={{display:'flex',gap:8}}>
+                <button onClick={()=>setShareSession(s)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 12px',color:'var(--text2)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>📸 Story</button>
                 <button onClick={()=>openEdit(s)} style={{background:'rgba(59,130,246,.15)',border:'1px solid rgba(59,130,246,.3)',borderRadius:8,padding:'5px 12px',color:'#60a5fa',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>✏️ Modifier</button>
                 <button onClick={()=>deleteSession(s.id)} style={{background:'rgba(239,68,68,.1)',border:'1px solid rgba(239,68,68,.2)',borderRadius:8,padding:'5px 12px',color:'var(--red)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:600}}>🗑 Supprimer</button>
               </div>

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { MUSCLE_LABELS, MUSCLE_COLORS } from '../../lib/constants'
+import { THEMES, getThemeFromUser } from '../../lib/themes'
 
 const isBW = (name) => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest')
 
@@ -11,6 +12,10 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
 
   const muscles = (session.muscle||'').split('+').map(m => MUSCLE_LABELS[m]||m)
   const muscleColor = MUSCLE_COLORS[(session.muscle||'').split('+')[0]] || '#ff3c3c'
+  // Use user's theme accent color if set, otherwise fallback to muscle color
+  const { themeKey } = getThemeFromUser(user)
+  const themeAccent = THEMES.find(t=>t.key===themeKey)?.preview || muscleColor
+  const storyColor = themeAccent
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
     .sort((a,b) => b.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0) - a.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0))
@@ -34,6 +39,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   }
 
   function draw(ctx, canvas) {
+    const muscleCol = storyColor
     const W = canvas.width, H = canvas.height
     // Safe zone: Instagram crops ~60px top/bottom, ~30px sides on some phones
     // We use 100px margin on all sides to be safe
@@ -52,20 +58,20 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
 
     // Top glow
     const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 700)
-    glow.addColorStop(0, `rgba(${hex2rgb(muscleColor)},0.2)`)
+    glow.addColorStop(0, `rgba(${hex2rgb(muscleCol)},0.2)`)
     glow.addColorStop(1, 'transparent')
     ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H)
 
     // Bottom glow
     const glow2 = ctx.createRadialGradient(W/2, H, 0, W/2, H, 600)
-    glow2.addColorStop(0, `rgba(${hex2rgb(muscleColor)},0.12)`)
+    glow2.addColorStop(0, `rgba(${hex2rgb(muscleCol)},0.12)`)
     glow2.addColorStop(1, 'transparent')
     ctx.fillStyle = glow2; ctx.fillRect(0, 0, W, H)
 
     // ── HEADER (y: 120 to 380) ──
     // Logo
     ctx.font = '900 88px "Barlow Condensed", sans-serif'
-    ctx.fillStyle = muscleColor
+    ctx.fillStyle = muscleCol
     ctx.textAlign = 'left'
     ctx.fillText('LIFT TRACKER', M, 210)
 
@@ -76,7 +82,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     ctx.fillText(dateStr.toUpperCase(), M, 270)
 
     // Divider
-    ctx.strokeStyle = `rgba(${hex2rgb(muscleColor)},0.5)`
+    ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.5)`
     ctx.lineWidth = 2
     ctx.beginPath(); ctx.moveTo(M, 300); ctx.lineTo(W-M, 300); ctx.stroke()
 
@@ -86,9 +92,9 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const bw = ctx.measureText(badgeText).width
     const bpad = 36
     roundRect(ctx, M, 320, bw + bpad*2, 90, 18)
-    ctx.fillStyle = `rgba(${hex2rgb(muscleColor)},0.15)`; ctx.fill()
-    ctx.strokeStyle = muscleColor; ctx.lineWidth = 2; ctx.stroke()
-    ctx.fillStyle = muscleColor
+    ctx.fillStyle = `rgba(${hex2rgb(muscleCol)},0.15)`; ctx.fill()
+    ctx.strokeStyle = muscleCol; ctx.lineWidth = 2; ctx.stroke()
+    ctx.fillStyle = muscleCol
     ctx.fillText(badgeText, M + bpad, 385)
 
     // ── STATS ROW (y: 450) ──
@@ -104,7 +110,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fill()
       ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke()
       ctx.font = `900 ${s.value.length > 4 ? 60 : 72}px "Barlow Condensed", sans-serif`
-      ctx.fillStyle = muscleColor
+      ctx.fillStyle = muscleCol
       ctx.textAlign = 'center'
       ctx.fillText(s.value, x + colW/2, 450 + 108)
       ctx.font = '600 28px "Barlow", sans-serif'
@@ -137,7 +143,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
 
       // Accent bar
       roundRect(ctx, M, y, 5, exCardH, 3)
-      ctx.fillStyle = muscleColor; ctx.fill()
+      ctx.fillStyle = muscleCol; ctx.fill()
 
       // Name (truncate if needed)
       const nameFontSize = Math.max(26, Math.floor(exCardH * 0.34))
@@ -158,7 +164,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       // Volume right
       const volStr = exVol >= 1000 ? `${(exVol/1000).toFixed(1)}t` : `${Math.round(exVol)}kg`
       ctx.font = `800 ${Math.max(28, Math.floor(exCardH * 0.36))}px "Barlow Condensed", sans-serif`
-      ctx.fillStyle = muscleColor
+      ctx.fillStyle = muscleCol
       ctx.textAlign = 'right'
       ctx.fillText(volStr, W - M, y + Math.floor(exCardH * 0.60))
       ctx.textAlign = 'left'
@@ -192,7 +198,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
 
     // ── FOOTER (fixed at bottom, safe zone) ──
     const footerY = H - 220
-    ctx.strokeStyle = `rgba(${hex2rgb(muscleColor)},0.35)`
+    ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.35)`
     ctx.lineWidth = 1.5
     ctx.beginPath(); ctx.moveTo(M, footerY); ctx.lineTo(W-M, footerY); ctx.stroke()
 
@@ -201,7 +207,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const drawAvatar = () => {
       ctx.save()
       ctx.beginPath(); ctx.arc(avCX, avCY, 52, 0, Math.PI*2)
-      ctx.strokeStyle = muscleColor; ctx.lineWidth = 3; ctx.stroke()
+      ctx.strokeStyle = muscleCol; ctx.lineWidth = 3; ctx.stroke()
       ctx.clip()
       if (user?.avatar?.startsWith('http')) {
         const img = new Image(); img.crossOrigin = 'anonymous'

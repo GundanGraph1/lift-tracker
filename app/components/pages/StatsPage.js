@@ -67,8 +67,15 @@ export default function StatsPage() {
   const totalVol = sessions.reduce((a,s)=>a+(s.total_volume||0),0)
   const avgVol = sessions.length ? totalVol/sessions.length : 0
   const maxVol = sessions.length ? Math.max(...sessions.map(s=>s.total_volume||0)) : 0
-  const last10 = [...sessions].slice(0,10).reverse()
-  const maxBar = Math.max(...last10.map(s=>s.total_volume||0),1)
+  // Last 10 DAYS (including rest days)
+  const today = new Date()
+  const last10Days = Array.from({length:10},(_,i)=>{
+    const d = new Date(today); d.setDate(d.getDate()-(9-i))
+    const dateStr = d.toISOString().split('T')[0]
+    const daySessions = sessions.filter(s=>s.session_date===dateStr)
+    return { dateStr, sessions: daySessions, isRest: daySessions.length===0 }
+  })
+  const maxBar = Math.max(...last10Days.map(d=>d.sessions.reduce((a,s)=>a+(s.total_volume||0),0)),1)
 
   const priority = ['Développé Couché (Bench Press)','Bench Press','Squat','Deadlift','Soulevé de terre (Deadlift)']
   const sortedPRs = [...(userPRs||[])].sort((a,b)=>{
@@ -139,18 +146,35 @@ export default function StatsPage() {
       {/* Volume chart */}
       <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
         <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase',marginBottom:16}}>📊 10 dernières séances</div>
-        {last10.length===0 ? <div style={{textAlign:'center',color:'var(--text3)',fontSize:13}}>Aucune donnée</div> : (
-          <div style={{display:'flex',alignItems:'flex-end',gap:6,height:80}}>
-            {last10.map((s,i)=>{
-              const h=Math.max(4,((s.total_volume||0)/maxBar)*80)
-              const color=MUSCLE_COLORS[s.muscle]||'var(--red)'
-              return <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-                <div style={{width:'100%',height:h,background:color,borderRadius:4,opacity:0.8}}/>
-                <div style={{fontSize:9,color:'var(--text3)',textAlign:'center'}}>{new Date(s.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}</div>
-              </div>
+        <div style={{display:'flex',alignItems:'flex-end',gap:4,height:100,marginBottom:4}}>
+            {last10Days.map((d,i)=>{
+              const vol = d.sessions.reduce((a,s)=>a+(s.total_volume||0),0)
+              const h = d.isRest ? 0 : Math.max(8,(vol/maxBar)*80)
+              const muscle = d.sessions[0]?.muscle||''
+              const color = MUSCLE_COLORS[muscle.split('+')[0]]||'var(--red)'
+              const dayName = new Date(d.dateStr+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short'}).slice(0,2)
+              const dayNum = new Date(d.dateStr+'T12:00:00').getDate()
+              return (
+                <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+                  {/* Volume label */}
+                  {!d.isRest&&<div style={{fontSize:8,color:'rgba(255,255,255,0.5)',fontWeight:600}}>{vol>=1000?(vol/1000).toFixed(1)+'t':Math.round(vol)+'kg'}</div>}
+                  {d.isRest&&<div style={{fontSize:8,color:'transparent'}}>-</div>}
+                  {/* Bar */}
+                  <div style={{width:'100%',height:80,display:'flex',alignItems:'flex-end'}}>
+                    {d.isRest
+                      ? <div style={{width:'100%',height:4,background:'var(--border)',borderRadius:2,opacity:0.4}}/>
+                      : <div style={{width:'100%',height:h,background:color,borderRadius:'4px 4px 2px 2px',opacity:0.85,transition:'height .3s'}}/>
+                    }
+                  </div>
+                  {/* Date */}
+                  <div style={{fontSize:8,color:d.isRest?'var(--border)':'var(--text3)',textAlign:'center',lineHeight:1.2}}>
+                    <div style={{fontWeight:600}}>{dayName}</div>
+                    <div>{dayNum}</div>
+                  </div>
+                </div>
+              )
             })}
           </div>
-        )}
       </div>
 
       {/* PRs */}
@@ -215,21 +239,42 @@ export default function StatsPage() {
             {progResults.map(n=><div key={n} className="ex-result-item" onClick={()=>{setProgEx(n);setProgSearch(n);setProgResults([])}}>{n}</div>)}
           </div>
         )}
-        {progData.length>1 && (
-          <div style={{position:'relative',height:120,marginTop:8}}>
-            <svg width="100%" height="100%" viewBox={`0 0 ${progData.length*50} 100`} preserveAspectRatio="none">
-              <polyline
-                points={progData.map((p,i)=>`${i*50+25},${100-((p.w/maxW)*80+10)}`).join(' ')}
-                fill="none" stroke="var(--red)" strokeWidth="2"
-              />
-              {progData.map((p,i)=>(
-                <circle key={i} cx={i*50+25} cy={100-((p.w/maxW)*80+10)} r="4" fill={p.w===maxW?'var(--gold)':'var(--red)'}/>
-              ))}
-            </svg>
-          </div>
-        )}
-        {progData.length===1&&<div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:20}}>Une seule séance enregistrée</div>}
-        {progEx&&progData.length===0&&<div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:20}}>Aucune donnée pour cet exercice</div>}
+        {progEx && (() => {
+          if (progData.length===0) return <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:20}}>Aucune donnée pour cet exercice</div>
+          const mx=Math.max(...progData.map(p=>p.w))
+          const mn=Math.min(...progData.map(p=>p.w))
+          const range=mx-mn||1
+          const PW=Math.max(320,progData.length*70)
+          const PH=150,padT=32,padB=28,padL=20,padR=20
+          const cW=PW-padL-padR,cH=PH-padT-padB
+          const gx=i=>padL+(progData.length===1?cW/2:i*(cW/(progData.length-1)))
+          const gy=v=>padT+cH-((v-mn)/range)*cH
+          return (
+            <div style={{overflowX:'auto',marginTop:8,background:'var(--s2)',borderRadius:12,padding:'8px 0'}}>
+              <svg width={PW} height={PH} style={{display:'block'}}>
+                {[0,0.5,1].map((f,i)=><line key={i} x1={padL} x2={PW-padR} y1={padT+cH*f} y2={padT+cH*f} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>)}
+                {progData.length>1&&<polygon
+                  points={[...progData.map((_,i)=>`${gx(i)},${gy(progData[i].w)}`),`${gx(progData.length-1)},${padT+cH}`,`${gx(0)},${padT+cH}`].join(' ')}
+                  fill="rgba(255,60,60,0.07)"
+                />}
+                {progData.length>1&&<polyline
+                  points={progData.map((p,i)=>`${gx(i)},${gy(p.w)}`).join(' ')}
+                  fill="none" stroke="var(--red)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"
+                />}
+                {progData.map((p,i)=>{
+                  const x=gx(i),y=gy(p.w),isMax=p.w===mx
+                  return (
+                    <g key={i}>
+                      <circle cx={x} cy={y} r={isMax?7:5} fill={isMax?'#fbbf24':'var(--red)'} stroke="#111" strokeWidth="1.5"/>
+                      <text x={x} y={y-12} textAnchor="middle" fill={isMax?'#fbbf24':'rgba(255,255,255,0.75)'} fontSize="11" fontWeight="700">{p.w}kg</text>
+                      <text x={x} y={PH-6} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="9">{p.date.slice(5).replace('-','/')}</text>
+                    </g>
+                  )
+                })}
+              </svg>
+            </div>
+          )
+        })()}
       </div>
 
       {/* PR Modal */}

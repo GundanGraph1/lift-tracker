@@ -291,31 +291,26 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     setDownloading(true)
     const canvas = canvasRef.current
     canvas.toBlob(async blob => {
-      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
-      const isAndroid = /Android/i.test(navigator.userAgent)
-      const isMobile = isIOS || isAndroid
-
-      // Sur mobile : télécharge l'image puis ouvre Instagram Stories
-      if (isMobile) {
-        const blobUrl = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = blobUrl
-        a.download = 'lift-tracker-story.png'
-        a.click()
-        URL.revokeObjectURL(blobUrl)
-        // Ouvre Instagram Stories après que l'image soit téléchargée
-        setTimeout(() => {
-          window.location.href = 'instagram://story-camera'
-        }, 1000)
-        setDownloading(false)
-        return
+      const file = new File([blob], `lift-tracker-${session.session_date}.png`, { type: 'image/png' })
+      // Try Web Share API (mobile)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Ma séance Lift Tracker',
+            text: `${user?.username} vient de s'entraîner 💪`,
+          })
+          setDownloading(false)
+          return
+        } catch(e) {
+          // User cancelled or error — fallback to download
+        }
       }
-
-      // PC : téléchargement direct
+      // Fallback: direct download
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'lift-tracker-story.png'
+      a.download = `lift-tracker-${session.session_date}.png`
       a.click()
       URL.revokeObjectURL(url)
       setDownloading(false)

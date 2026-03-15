@@ -30,9 +30,11 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [importCode, setImportCode] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
+  const [localPresets, setLocalPresets] = useState(null)
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
-  const [localPresets, setLocalPresets] = useState(null)
+  const dragIdxRef = useRef(null)
+  const dragOverIdxRef = useRef(null)
   const [restTimer, setRestTimer] = useState(null)
   const [restLeft, setRestLeft] = useState(0)
   const restRef = useRef(null)
@@ -180,44 +182,89 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   async function savePresetsOrder(ordered) {
     setLocalPresets(ordered)
     actions.setPresets(ordered)
-    // Save positions to DB
     await Promise.all(ordered.map((p,i) => db.from('presets').update({position:i}).eq('id',p.id)))
   }
 
-  // Touch drag handlers
-  function onDragStart(i) { setDragIdx(i) }
-  function onDragEnter(i) { setDragOverIdx(i) }
-  function onDragEnd() {
-    if (dragIdx === null || dragOverIdx === null || dragIdx === dragOverIdx) {
-      setDragIdx(null); setDragOverIdx(null); return
-    }
+  function reorder(fromIdx, toIdx) {
+    if (fromIdx === null || toIdx === null || fromIdx === toIdx) return
     const ordered = [...sortedPresets]
-    const [moved] = ordered.splice(dragIdx, 1)
-    ordered.splice(dragOverIdx, 0, moved)
+    const [moved] = ordered.splice(fromIdx, 1)
+    ordered.splice(toIdx, 0, moved)
     savePresetsOrder(ordered)
+  }
+
+  // Compute translate for each item during drag
+  function getItemTranslate(i) {
+    const from = dragIdxRef.current
+    const over = dragOverIdxRef.current
+    if (from === null || over === null || from === over) return 0
+    if (i === from) return 0 // dragged item handled separately
+    const itemH = 60 // approximate item height in px
+    if (from < over) {
+      // dragging down: items between from+1..over shift UP
+      if (i > from && i <= over) return -itemH
+    } else {
+      // dragging up: items between over..from-1 shift DOWN
+      if (i >= over && i < from) return itemH
+    }
+    return 0
+  }
+
+  // Desktop drag
+  function onDragStart(e, i) {
+    dragIdxRef.current = i
+    dragOverIdxRef.current = i
+    setDragIdx(i)
+    setDragOverIdx(i)
+    e.dataTransfer.effectAllowed = 'move'
+    // Transparent ghost
+    const ghost = document.createElement('div')
+    ghost.style.position = 'fixed'; ghost.style.top = '-9999px'
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 0, 0)
+    setTimeout(() => document.body.removeChild(ghost), 0)
+  }
+  function onDragEnter(e, i) {
+    if (dragIdxRef.current === null || i === dragOverIdxRef.current) return
+    dragOverIdxRef.current = i
+    setDragOverIdx(i)
+  }
+  function onDragEnd() {
+    reorder(dragIdxRef.current, dragOverIdxRef.current)
+    dragIdxRef.current = null; dragOverIdxRef.current = null
     setDragIdx(null); setDragOverIdx(null)
   }
 
-  // Touch drag handlers (mobile)
-  const touchDragRef = { startY: 0, startIdx: null }
+  // Touch drag
+  const touchStateRef = useRef({ startIdx: null, lastOverIdx: null })
   function onTouchStart(e, i) {
-    touchDragRef.startY = e.touches[0].clientY
-    touchDragRef.startIdx = i
-    setDragIdx(i)
+    touchStateRef.current = { startIdx: i, lastOverIdx: i }
+    dragIdxRef.current = i; dragOverIdxRef.current = i
+    setDragIdx(i); setDragOverIdx(i)
   }
   function onTouchMove(e) {
+    if (touchStateRef.current.startIdx === null) return
     e.preventDefault()
     const y = e.touches[0].clientY
-    const elements = document.querySelectorAll('[data-preset-idx]')
-    elements.forEach(el => {
+    const els = document.querySelectorAll('[data-preset-idx]')
+    els.forEach(el => {
       const rect = el.getBoundingClientRect()
       if (y >= rect.top && y <= rect.bottom) {
         const idx = parseInt(el.getAttribute('data-preset-idx'))
-        setDragOverIdx(idx)
+        if (idx !== touchStateRef.current.lastOverIdx) {
+          touchStateRef.current.lastOverIdx = idx
+          dragOverIdxRef.current = idx
+          setDragOverIdx(idx)
+        }
       }
     })
   }
-  function onTouchEnd() { onDragEnd() }
+  function onTouchEnd() {
+    reorder(touchStateRef.current.startIdx, touchStateRef.current.lastOverIdx)
+    touchStateRef.current = { startIdx: null, lastOverIdx: null }
+    dragIdxRef.current = null; dragOverIdxRef.current = null
+    setDragIdx(null); setDragOverIdx(null)
+  }
 
   async function importPreset() {
     if (!importCode.trim()) return
@@ -379,22 +426,42 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:14,padding:16,marginBottom:12}}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:12,color:'var(--text2)'}}>MES PRESETS</div>
           {presets.length===0 && <div style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>Aucun preset</div>}
-          {sortedPresets.map((p,i) => (
+          {sortedPresets.map((p,i) => {
+            const isBeingDragged = dragIdx === i
+            const translate = isBeingDragged ? 0 : getItemTranslate(i)
+            const isDropTarget = dragOverIdx === i && dragIdx !== i
+            return (
             <div key={p.id}
               data-preset-idx={i}
               draggable
-              onDragStart={()=>onDragStart(i)}
-              onDragEnter={()=>onDragEnter(i)}
+              onDragStart={e=>onDragStart(e,i)}
+              onDragEnter={e=>onDragEnter(e,i)}
               onDragEnd={onDragEnd}
               onDragOver={e=>e.preventDefault()}
               onTouchStart={e=>onTouchStart(e,i)}
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
-              style={{padding:'8px 0',borderBottom:'1px solid var(--border)',transition:'opacity .15s',opacity:dragIdx===i?0.4:1,background:dragOverIdx===i&&dragIdx!==i?'rgba(255,60,60,0.05)':'',borderRadius:8}}>
+              style={{
+                padding:'8px 0',
+                borderBottom: isDropTarget ? '2px solid var(--red)' : '1px solid var(--border)',
+                borderRadius:8,
+                willChange:'transform',
+                transition: isBeingDragged ? 'opacity 0.15s' : 'transform 0.18s cubic-bezier(0.2,0,0,1), border-color 0.1s',
+                transform: isBeingDragged ? 'scale(1.03)' : `translateY(${translate}px)`,
+                opacity: isBeingDragged ? 0.45 : 1,
+                background: isBeingDragged ? 'var(--s3)' : 'transparent',
+                boxShadow: isBeingDragged ? '0 8px 24px rgba(0,0,0,0.5)' : 'none',
+                position: 'relative',
+                zIndex: isBeingDragged ? 20 : 1,
+                userSelect: 'none',
+              }}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <span style={{color:'var(--border2)',fontSize:16,cursor:'grab',touchAction:'none'}}>⠿</span>
-                  <div><div style={{fontSize:13,fontWeight:600}}>{p.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div></div>
+                  <span style={{color:'var(--text3)',fontSize:20,cursor:'grab',touchAction:'none',padding:'0 6px',lineHeight:1,fontFamily:'monospace'}}>⠿</span>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600}}>{p.name}</div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div>
+                  </div>
                 </div>
                 <div style={{display:'flex',gap:6}}>
                   <button onClick={()=>setSharePresetId(sharePresetId===p.id?null:p.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔗</button>
@@ -412,7 +479,8 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                 </div>
               )}
             </div>
-          ))}
+          )})
+          }
           {/* Import preset */}
           <div style={{marginTop:10,borderTop:'1px solid var(--border)',paddingTop:10}}>
             {!showImport

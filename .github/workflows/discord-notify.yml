@@ -1,0 +1,53 @@
+name: Discord Notification
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord (dev)
+        if: github.ref == 'refs/heads/dev'
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{
+            "username": "Lift Tracker Dev",
+            "avatar_url": "https://cdn.discordapp.com/emojis/🔨.png",
+            "embeds": [{
+              "title": "🔨 Nouveau push sur DEV",
+              "description": "'"${{ github.event.head_commit.message }}"'",
+              "color": 16753920,
+              "fields": [
+                { "name": "Branche", "value": "`dev`", "inline": true },
+                { "name": "Auteur", "value": "'"${{ github.actor }}"'", "inline": true }
+              ],
+              "footer": { "text": "En cours de développement — pas encore en prod" },
+              "thumbnail": { "url": "https://em-content.zobj.net/source/twitter/376/hammer-and-wrench_1f6e0-fe0f.png" }
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}
+
+      - name: Notify Discord (main)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{
+            "username": "Lift Tracker",
+            "embeds": [{
+              "title": "🚀 Site mis à jour !",
+              "description": "'"${{ github.event.head_commit.message }}"'",
+              "color": 5763719,
+              "fields": [
+                { "name": "Branche", "value": "`main` → production", "inline": true },
+                { "name": "Auteur", "value": "'"${{ github.actor }}"'", "inline": true },
+                { "name": "Lien", "value": "[Voir le site](https://lift-tracker-two.vercel.app)", "inline": false }
+              ],
+              "footer": { "text": "Lift Tracker est live ✅" },
+              "thumbnail": { "url": "https://em-content.zobj.net/source/twitter/376/rocket_1f680.png" }
+            }]
+          }' \
+          ${{ secrets.DISCORD_WEBHOOK }}

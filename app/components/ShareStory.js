@@ -14,7 +14,6 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
     .sort((a,b) => b.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0) - a.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0))
-    .slice(0, 4)
   const totalVol = exercises.reduce((a,ex) => a+ex.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0), 0)
   const totalSets = (session.exercises||[]).reduce((a,ex)=>a+ex.sets.length,0)
   const sessionPRs = prs.filter(p => p.date === session.session_date && !p.is_manual)
@@ -121,10 +120,13 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     ctx.fillText('TOP EXERCICES', M, curY)
     curY += 20
 
-    // Show up to 5 exercises, smaller cards to fit
-    const maxExos = Math.min(topExos.length, 5)
-    const exCardH = 118
-    topExos.slice(0, maxExos).forEach((ex, i) => {
+    // Show ALL exercises, adjust card height to fit
+    const allExos = [...topExos, ...(session.exercises||[]).filter(ex => isBW(ex.name))]
+    const maxExos = allExos.length
+    // Dynamically shrink cards if many exercises
+    const availH = H - curY - 300 // leave room for footer
+    const exCardH = Math.max(80, Math.min(118, Math.floor(availH / Math.max(maxExos, 1)) - 12))
+    allExos.forEach((ex, i) => {
       const y = curY + i * (exCardH + 12)
       const exVol = ex.sets.reduce((a,st)=>a+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0)
       const bestSet = ex.sets.reduce((best,st) => (parseFloat(st.w)||0) > (parseFloat(best.w)||0) ? st : best, ex.sets[0]||{r:0,w:0})
@@ -138,30 +140,31 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillStyle = muscleColor; ctx.fill()
 
       // Name (truncate if needed)
-      ctx.font = '700 38px "Barlow Condensed", sans-serif'
+      const nameFontSize = Math.max(26, Math.floor(exCardH * 0.34))
+      ctx.font = `700 ${nameFontSize}px "Barlow Condensed", sans-serif`
       ctx.fillStyle = '#ffffff'
       const nameMaxW = CONTENT_W - 260
       let name = ex.name
       while (ctx.measureText(name).width > nameMaxW && name.length > 8) name = name.slice(0,-1)
       if (name !== ex.name) name += '…'
-      ctx.fillText(name, M + 22, y + 50)
+      ctx.fillText(name, M + 22, y + Math.floor(exCardH * 0.44))
 
       // Sets info
       const setsStr = `${ex.sets.length} séries · max ${bestSet.w||0}kg`
-      ctx.font = '500 27px "Barlow", sans-serif'
+      ctx.font = `500 ${Math.max(20, Math.floor(exCardH * 0.23))}px "Barlow", sans-serif`
       ctx.fillStyle = 'rgba(255,255,255,0.45)'
-      ctx.fillText(setsStr, M + 22, y + 88)
+      ctx.fillText(setsStr, M + 22, y + Math.floor(exCardH * 0.78))
 
       // Volume right
       const volStr = exVol >= 1000 ? `${(exVol/1000).toFixed(1)}t` : `${Math.round(exVol)}kg`
-      ctx.font = '800 42px "Barlow Condensed", sans-serif'
+      ctx.font = `800 ${Math.max(28, Math.floor(exCardH * 0.36))}px "Barlow Condensed", sans-serif`
       ctx.fillStyle = muscleColor
       ctx.textAlign = 'right'
-      ctx.fillText(volStr, W - M, y + 68)
+      ctx.fillText(volStr, W - M, y + Math.floor(exCardH * 0.60))
       ctx.textAlign = 'left'
     })
 
-    curY += maxExos * (exCardH + 12) + 20
+    curY += allExos.length * (exCardH + 12) + 20
 
     // ── PRs ──
     if (sessionPRs.length > 0 && curY < H - 350) {

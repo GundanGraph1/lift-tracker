@@ -30,6 +30,9 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [importCode, setImportCode] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [importLoading, setImportLoading] = useState(false)
+  const [dragIdx, setDragIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [localPresets, setLocalPresets] = useState(null)
   const [restTimer, setRestTimer] = useState(null)
   const [restLeft, setRestLeft] = useState(0)
   const restRef = useRef(null)
@@ -171,6 +174,51 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     return btoa(unescape(encodeURIComponent(JSON.stringify(data))))
   }
 
+  // Sorted presets with local order
+  const sortedPresets = (localPresets || [...(presets||[])].sort((a,b)=>(a.position||0)-(b.position||0)))
+
+  async function savePresetsOrder(ordered) {
+    setLocalPresets(ordered)
+    actions.setPresets(ordered)
+    // Save positions to DB
+    await Promise.all(ordered.map((p,i) => db.from('presets').update({position:i}).eq('id',p.id)))
+  }
+
+  // Touch drag handlers
+  function onDragStart(i) { setDragIdx(i) }
+  function onDragEnter(i) { setDragOverIdx(i) }
+  function onDragEnd() {
+    if (dragIdx === null || dragOverIdx === null || dragIdx === dragOverIdx) {
+      setDragIdx(null); setDragOverIdx(null); return
+    }
+    const ordered = [...sortedPresets]
+    const [moved] = ordered.splice(dragIdx, 1)
+    ordered.splice(dragOverIdx, 0, moved)
+    savePresetsOrder(ordered)
+    setDragIdx(null); setDragOverIdx(null)
+  }
+
+  // Touch drag handlers (mobile)
+  const touchDragRef = { startY: 0, startIdx: null }
+  function onTouchStart(e, i) {
+    touchDragRef.startY = e.touches[0].clientY
+    touchDragRef.startIdx = i
+    setDragIdx(i)
+  }
+  function onTouchMove(e) {
+    e.preventDefault()
+    const y = e.touches[0].clientY
+    const elements = document.querySelectorAll('[data-preset-idx]')
+    elements.forEach(el => {
+      const rect = el.getBoundingClientRect()
+      if (y >= rect.top && y <= rect.bottom) {
+        const idx = parseInt(el.getAttribute('data-preset-idx'))
+        setDragOverIdx(idx)
+      }
+    })
+  }
+  function onTouchEnd() { onDragEnd() }
+
   async function importPreset() {
     if (!importCode.trim()) return
     setImportLoading(true)
@@ -187,6 +235,9 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     }
     setImportLoading(false)
   }
+
+  // Reset local order when presets reload
+  useState(() => { setLocalPresets(null) })
 
   function loadPreset(preset) {
     setMuscles(preset.muscle ? preset.muscle.split('+') : ['Dos'])
@@ -328,10 +379,23 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:14,padding:16,marginBottom:12}}>
           <div style={{fontSize:13,fontWeight:700,marginBottom:12,color:'var(--text2)'}}>MES PRESETS</div>
           {presets.length===0 && <div style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>Aucun preset</div>}
-          {presets.map(p => (
-            <div key={p.id} style={{padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+          {sortedPresets.map((p,i) => (
+            <div key={p.id}
+              data-preset-idx={i}
+              draggable
+              onDragStart={()=>onDragStart(i)}
+              onDragEnter={()=>onDragEnter(i)}
+              onDragEnd={onDragEnd}
+              onDragOver={e=>e.preventDefault()}
+              onTouchStart={e=>onTouchStart(e,i)}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              style={{padding:'8px 0',borderBottom:'1px solid var(--border)',transition:'opacity .15s',opacity:dragIdx===i?0.4:1,background:dragOverIdx===i&&dragIdx!==i?'rgba(255,60,60,0.05)':'',borderRadius:8}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div><div style={{fontSize:13,fontWeight:600}}>{p.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div></div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{color:'var(--border2)',fontSize:16,cursor:'grab',touchAction:'none'}}>⠿</span>
+                  <div><div style={{fontSize:13,fontWeight:600}}>{p.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{(p.exercises||[]).length} exos — {(p.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</div></div>
+                </div>
                 <div style={{display:'flex',gap:6}}>
                   <button onClick={()=>setSharePresetId(sharePresetId===p.id?null:p.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'5px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔗</button>
                   <button onClick={()=>loadPreset(p)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Charger</button>

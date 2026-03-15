@@ -75,6 +75,17 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     setExSearch(''); setExResults([])
   }
 
+  async function createAndAddExercise(name) {
+    if (!name.trim()) return
+    // Save to custom_exercises table
+    const { data } = await db.from('custom_exercises').insert([{user_id: currentUser.id, name: name.trim()}]).select()
+    if (data && data[0]) {
+      actions.setCustomExercises([...(customExercises||[]), data[0]])
+    }
+    addExercise(name.trim())
+    showToast('✅ Exercice créé !')
+  }
+
   function updateSet(exId, setId, field, val) {
     setExercises(prev => prev.map(ex => ex.id!==exId ? ex : {...ex, sets: ex.sets.map(st => st.id!==setId ? st : {...st,[field]:val})}))
   }
@@ -256,6 +267,15 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         {exResults.length > 0 && (
           <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12,marginTop:4,overflow:'hidden'}}>
             {exResults.map(n => <div key={n} className="ex-result-item" onClick={()=>addExercise(n)}>{n}</div>)}
+          </div>
+        )}
+        {exSearch.length > 1 && exResults.length === 0 && (
+          <div style={{marginTop:6,padding:'8px 12px',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <span style={{fontSize:12,color:'var(--text2)'}}>Exercice introuvable</span>
+            <button onClick={()=>createAndAddExercise(exSearch)}
+              style={{background:'rgba(59,130,246,.2)',border:'1px solid rgba(59,130,246,.4)',borderRadius:8,padding:'5px 12px',color:'#60a5fa',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:700}}>
+              ➕ Créer "{exSearch}"
+            </button>
           </div>
         )}
       </div>

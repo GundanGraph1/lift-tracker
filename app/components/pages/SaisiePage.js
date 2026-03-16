@@ -775,8 +775,10 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               <button onClick={savePreset} style={{background:'var(--green)',border:'none',borderRadius:8,padding:'8px 14px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Sauver</button>
             </div>
           )}
-        </div></div>
+        </div>
       )}
+      </div>
+    )}
     </div>
   )
 }

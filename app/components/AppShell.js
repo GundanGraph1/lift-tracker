@@ -13,6 +13,7 @@ import FeedPage from './pages/FeedPage'
 import CalendrierPage from './pages/CalendrierPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import SantePage from './pages/SantePage'
+import UpdateBanner from './UpdateBanner'
 
 export default function AppShell() {
   const currentUser = useStore(s => s.currentUser)
@@ -164,6 +165,9 @@ export default function AppShell() {
 
       {/* Edit Profile Modal */}
       {showEdit && <EditProfile onClose={() => setShowEdit(false)} />}
+
+      {/* Update Banner — shown once per user per version */}
+      <UpdateBanner />
     </div>
   )
 }

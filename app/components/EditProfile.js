@@ -196,15 +196,15 @@ export default function EditProfile({ onClose }) {
                   <label className="field-label" style={{fontSize:10}}>Niveau d'activité</label>
                   <div style={{display:'flex',flexDirection:'column',gap:4}}>
                     {[
-                      {v:'sedentary',l:'🪑 Sédentaire','d':'Peu ou pas d\'exercice'},
-                      {v:'light',l:'🚶 Léger','d':'1-3 séances/sem'},
-                      {v:'moderate',l:'🏃 Modéré','d':'3-5 séances/sem'},
-                      {v:'active',l:'⚡ Actif','d':'6-7 séances/sem'},
-                      {v:'very_active',l:'🔥 Très actif','d':'2x/jour ou travail physique'},
+                      {v:'sedentary',l:'🪑 Sédentaire',desc:"Peu ou pas d'exercice"},
+                      {v:'light',l:'🚶 Léger',desc:'1-3 séances/sem'},
+                      {v:'moderate',l:'🏃 Modéré',desc:'3-5 séances/sem'},
+                      {v:'active',l:'⚡ Actif',desc:'6-7 séances/sem'},
+                      {v:'very_active',l:'🔥 Très actif',desc:'2x/jour ou travail physique'},
                     ].map(a=>(
-                      <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'rgba(var(--red-rgb,255,60,60),0.08)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
+                      <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'var(--s1)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
                         <span>{a.l}</span>
-                        <span style={{fontSize:10,opacity:0.6,fontWeight:400}}>{a.d}</span>
+                        <span style={{fontSize:10,opacity:0.6,fontWeight:400}}>{a.desc}</span>
                       </button>
                     ))}
                   </div>

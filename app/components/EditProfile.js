@@ -300,7 +300,7 @@ export default function EditProfile({ onClose }) {
                 </div>
               </div>
 
-              {/* Color section */}
+              {/* Thèmes standard */}
               <div>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 12 }}>Couleur d&apos;accent</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
@@ -312,6 +312,32 @@ export default function EditProfile({ onClose }) {
                     }}>
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: t.preview, boxShadow: selectedTheme === t.key ? `0 0 0 3px ${t.preview}40` : 'none' }} />
                       <span style={{ fontSize: 9, fontWeight: 700, color: selectedTheme === t.key ? t.preview : 'var(--text3)' }}>{t.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Thèmes premium */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 4 }}>
+                  ✦ Thèmes premium
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 12, opacity: 0.7 }}>Fond personnalisé + effets lumineux</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {THEMES.filter(t => t.premium).map(t => (
+                    <div key={t.key} onClick={() => selectTheme(t.key)} style={{
+                      border: `2px solid ${selectedTheme === t.key ? t.preview : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: 12, padding: '12px 6px', cursor: 'pointer',
+                      background: selectedTheme === t.key ? `${t.preview}12` : 'var(--s2)',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                      transition: 'all .2s',
+                      boxShadow: selectedTheme === t.key ? `0 0 12px ${t.preview}30` : 'none',
+                    }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', background: t.preview,
+                        boxShadow: selectedTheme === t.key ? `0 0 10px ${t.preview}60, 0 0 20px ${t.preview}30` : `0 0 6px ${t.preview}40`,
+                      }} />
+                      <span style={{ fontSize: 9, fontWeight: 700, color: selectedTheme === t.key ? t.preview : 'var(--text2)', textAlign: 'center' }}>{t.name}</span>
                     </div>
                   ))}
                 </div>

@@ -253,14 +253,14 @@ export default function EditProfile({ onClose }) {
                         steps:'12 000 – 15 000 pas/jour',
                         qui:'Sport quasi-quotidien ou boulot physique, toujours en mouvement.',
                         sport:'6-7 séances/sem ou boulot debout/en déplacement.',
-                        exemple:'Serveur, maçon, coach sportif, ou tu t'entraînes tous les jours.',
+                        exemple:"Serveur, maçon, coach sportif, ou tu t'entraînes tous les jours.",
                       },
                       {
                         v:'very_active', l:'🔥 Très actif', color:'#ef4444',
                         steps:'> 15 000 pas/jour',
                         qui:'Sport intense + boulot physique. Ton corps est en mouvement toute la journée.',
                         sport:'2 séances/jour ou athlète de haut niveau.',
-                        exemple:'Maçon qui s'entraîne le soir, militaire, sportif pro.',
+                        exemple:"Maçon qui s'entraîne le soir, militaire, sportif pro.",
                       },
                     ].map(a => (
                       <div key={a.v} onClick={()=>{setActivityLevel(a.v);setShowActivityInfo(false)}} style={{marginBottom:10,padding:'12px 14px',background:activityLevel===a.v?'var(--s1)':'var(--s2)',border:`1.5px solid ${activityLevel===a.v?a.color:'var(--border)'}`,borderRadius:12,cursor:'pointer',transition:'all .15s'}}>

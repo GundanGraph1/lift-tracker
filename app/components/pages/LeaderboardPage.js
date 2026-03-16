@@ -78,16 +78,43 @@ export default function LeaderboardPage() {
         return {user:u,val:total,detail:`${us.length} séances au total`,color:'var(--green)',display:`${(total/1000).toFixed(1)}t`}
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
-    const prTab = (tab==='bench')?['bench','developpe couche']:(tab==='squat')?['squat','hack squat','leg press']:(tab==='deadlift')?['deadlift','souleve de terre','romanian']:null
-    if (prTab) {
+    // Mots-clés stricts — pas de leg press, hack squat, romanian dans les big 3
+    const PR_KEYWORDS = {
+      bench: {
+        include: ['bench','developpe couche','développé couché','presse inclinee','presse inclinée'],
+        exclude: ['haltere','haltère','cable','poulie'],
+      },
+      squat: {
+        include: ['squat barre','back squat','front squat','squat'],
+        exclude: ['hack','leg press','goblet','smith','bulgare','bulgarian','overhead'],
+      },
+      deadlift: {
+        include: ['deadlift','soulevé de terre','souleve de terre'],
+        exclude: ['romanian','roumain','jambe tendue','sumo'] // sumo est un vrai deadlift mais différent
+      },
+    }
+    const prCat = PR_KEYWORDS[tab]
+    if (prCat) {
       const colors = {bench:'var(--gold)',squat:'var(--blue)',deadlift:'var(--purple)'}
+      const matchesEx = (name) => {
+        const n = normalize(name)
+        const included = prCat.include.some(k => n.includes(normalize(k)))
+        const excluded = prCat.exclude.some(k => n.includes(normalize(k)))
+        return included && !excluded
+      }
       return filteredUsers.map(u=>{
         let best=0,bestReps=0,bestDate=''
+        // D'abord les PRs enregistrés
         prs.filter(p=>p.user_id===u.id).forEach(p=>{
-          if(prTab.some(k=>normalize(p.exercise).includes(k))&&p.weight>best){best=p.weight;bestReps=p.reps;bestDate=p.date}
+          if(matchesEx(p.exercise) && parseFloat(p.weight)>best){
+            best=parseFloat(p.weight);bestReps=p.reps;bestDate=p.date
+          }
         })
+        // Puis scanner toutes les séances
         sessions.filter(s=>s.user_id===u.id).forEach(s=>(s.exercises||[]).forEach(e=>{
-          if(prTab.some(k=>normalize(e.name).includes(k)))e.sets.forEach(st=>{if(parseFloat(st.w)>best){best=parseFloat(st.w);bestReps=st.r;bestDate=s.session_date}})
+          if(matchesEx(e.name)) e.sets.forEach(st=>{
+            if(parseFloat(st.w)>best){best=parseFloat(st.w);bestReps=st.r;bestDate=s.session_date}
+          })
         }))
         if(!best) return null
         const dateStr=bestDate?new Date(bestDate+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}):''

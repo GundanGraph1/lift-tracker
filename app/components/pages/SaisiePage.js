@@ -552,21 +552,20 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
       {/* ─── MODE MUSCU ─── */}
       {mode === 'muscu' && (
-        <div style={{display:'contents'}}>
-        <label className="field-label">Groupe musculaire</label>
-        <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-          {Object.keys(MUSCLE_LABELS).map(m => {
-            const sel = muscles.includes(m)
-            return <button key={m} onClick={()=>setMuscles(prev=>sel?prev.filter(x=>x!==m):[...prev,m])} style={{background:sel?'var(--red)':'var(--s2)',border:`1px solid ${sel?'var(--red)':'var(--border)'}`,borderRadius:8,padding:'5px 12px',color:sel?'white':'var(--text2)',cursor:'pointer',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,transition:'all 0.15s'}}>{MUSCLE_LABELS[m]}</button>
-          })}
-          {muscles.length > 0 && (
-            <div style={{width:'100%',marginTop:4,fontSize:11,color:'var(--text3)'}}>
-              Séance : <span style={{color:'var(--text2)',fontWeight:600}}>{muscles.map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</span>
-              {muscles.length > 1 && <button onClick={()=>setMuscles(['Dos'])} style={{marginLeft:8,background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:11}}>✕ Reset</button>}
-            </div>
-          )}
-        </div>
-
+        <div>
+          <label className="field-label">Groupe musculaire</label>
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
+            {Object.keys(MUSCLE_LABELS).map(m => {
+              const sel = muscles.includes(m)
+              return <button key={m} onClick={()=>setMuscles(prev=>sel?prev.filter(x=>x!==m):[...prev,m])} style={{background:sel?'var(--red)':'var(--s2)',border:`1px solid ${sel?'var(--red)':'var(--border)'}`,borderRadius:8,padding:'5px 12px',color:sel?'white':'var(--text2)',cursor:'pointer',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,transition:'all 0.15s'}}>{MUSCLE_LABELS[m]}</button>
+            })}
+            {muscles.length > 0 && (
+              <div style={{width:'100%',marginTop:4,fontSize:11,color:'var(--text3)'}}>
+                Séance : <span style={{color:'var(--text2)',fontWeight:600}}>{muscles.map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</span>
+                {muscles.length > 1 && <button onClick={()=>setMuscles(['Dos'])} style={{marginLeft:8,background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:11}}>✕ Reset</button>}
+              </div>
+            )}
+          </div>
       <div style={{marginBottom:16}}>
         <label className="field-label">Notes (optionnel)</label>
         <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="RPE, douleurs, humeur..." style={{resize:'none'}} />

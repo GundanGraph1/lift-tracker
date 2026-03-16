@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { db } from '../../lib/supabase'
 import { useStore, actions } from '../../lib/store'
 import { applyTheme, getThemeFromUser } from '../../lib/themes'
@@ -135,13 +135,13 @@ export default function AppShell() {
   // ── Swipe physique avec inertie ──
   const [navOffset, setNavOffset] = useState(0)   // offset en px (0 = page 0)
   const [navDrag, setNavDrag] = useState(0)        // delta en cours de drag
-  const swipe = { x0: null, y0: null, t0: null, vx: 0 }
-  const NAV_TAB_W = typeof window !== 'undefined' ? Math.floor(window.innerWidth / 3) : 120
-  const maxOffset = (allNavPages.length - 3) * NAV_TAB_W
+  const swipe = useRef({ x0: null, y0: null, t0: null, vx: 0 })
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
+  const getTabW = () => typeof window !== 'undefined' ? Math.floor(window.innerWidth / 3) : 120
+  const getMaxOff = (n) => Math.max(0, (n - 3) * getTabW())
 
-  const navTranslateX = clamp(-(navOffset - navDrag), -maxOffset, 0)
-  const navActivePage = Math.round(navOffset / NAV_TAB_W) // index du 1er onglet visible
+  const navTranslateX = clamp(-(navOffset - navDrag), -getMaxOff(allNavPages.length), 0)
+  const navActivePage = Math.round(navOffset / getTabW()) // index du 1er onglet visible
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
 
@@ -198,33 +198,30 @@ export default function AppShell() {
       <nav className="nav-bar"
         onTouchStart={e => {
           const t = e.touches[0]
-          swipe.x0 = t.clientX; swipe.y0 = t.clientY
-          swipe.t0 = Date.now(); swipe.vx = 0
+          swipe.current.x0 = t.clientX; swipe.current.y0 = t.clientY
+          swipe.current.t0 = Date.now(); swipe.current.vx = 0
         }}
         onTouchMove={e => {
-          if (swipe.x0 === null) return
-          const dx = e.touches[0].clientX - swipe.x0
-          const dy = Math.abs(e.touches[0].clientY - swipe.y0)
+          if (swipe.current.x0 === null) return
+          const dx = e.touches[0].clientX - swipe.current.x0
+          const dy = Math.abs(e.touches[0].clientY - swipe.current.y0)
           if (dy > Math.abs(dx) + 8) return // scroll vertical prioritaire
           e.preventDefault()
           const now = Date.now()
-          swipe.vx = (e.touches[0].clientX - swipe.x0) / Math.max(1, now - swipe.t0)
+          swipe.current.vx = (e.touches[0].clientX - swipe.current.x0) / Math.max(1, now - swipe.current.t0)
           setNavDrag(dx)
         }}
         onTouchEnd={() => {
-          if (swipe.x0 === null) return
-          // Calcul snap avec vélocité
-          const tabW = Math.floor(window.innerWidth / 3)
-          const maxOff = (allNavPages.length - 3) * tabW
+          if (swipe.current.x0 === null) return
+          const tabW = getTabW()
+          const maxOff = getMaxOff(allNavPages.length)
           let target = navOffset - navDrag
-          // Inertie : si vitesse > seuil, avance d'un tab en plus
-          if (swipe.vx < -0.3) target += tabW
-          if (swipe.vx > 0.3) target -= tabW
-          // Snap au tab le plus proche
+          if (swipe.current.vx < -0.3) target += tabW
+          if (swipe.current.vx > 0.3) target -= tabW
           const snapped = Math.round(target / tabW) * tabW
           setNavOffset(clamp(snapped, 0, maxOff))
           setNavDrag(0)
-          swipe.x0 = null
+          swipe.current.x0 = null
         }}
         style={{touchAction:'pan-y'}}>
         <div style={{
@@ -235,7 +232,7 @@ export default function AppShell() {
           <div style={{
             display:'flex',
             width: `${allNavPages.length * 100 / 3}%`,
-            transform: `translateX(${navTranslateX / allNavPages.length * 3}px)`,
+            transform: `translateX(${navTranslateX}px)`,
             transition: navDrag !== 0 ? 'none' : 'transform .35s cubic-bezier(.25,.46,.45,.94)',
             willChange:'transform',
           }}>

@@ -194,8 +194,24 @@ export default function LoginScreen() {
   return (
     <div style={{maxWidth:480,margin:'0 auto',padding:'60px 24px 24px'}}>
       <Toast />
-      <div style={{fontFamily:'var(--fm)',fontSize:48,fontWeight:900,color:'var(--red)',letterSpacing:3,lineHeight:1}}>LIFT</div>
-      <div style={{fontFamily:'var(--fm)',fontSize:48,fontWeight:900,letterSpacing:3,lineHeight:1,marginBottom:4}}>TRACKER</div>
+      <svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" style={{width:220,marginBottom:8}}>
+        {/* Carré rouge avec icône */}
+        <rect x="0" y="0" width="76.11" height="76.11" rx="9.38" ry="9.38" fill="var(--red)"/>
+        <path d="M51.72,31.49l-10.63-.02h0s-.76,0-.76,0c-.87,0-1.66-.35-2.22-.92-.57-.57-.92-1.36-.92-2.22,0-1.63,1.25-2.96,2.85-3.11l8.61-.04c1.08,0,1.89-.96,1.89-1.94l1.89-7.06c0-1.16-.92-2.01-2.09-2.01h-11.89c-.74,0-1.93.59-2.44,1.11l-12.79,15.89c-.68.67-1,1.86-1,2.85v1.61h0v18.58h.02c-.01.12-.02.24-.02.37v6.54h0c0,.47.38.85.85.85.18,0,.34-.05.47-.15l9.24-7.14c.96-.65,1.53-1.73,1.53-2.89v-13.28c0-.98.71-1.75,1.57-1.94.64-.13,1.45.18,1.92.76.05.06.09.12.13.18l.83,1.15.05.06,3.03,4.06c.28.38.54.79.81,1.18.62.91,1.64,1.38,2.92,1.38h6.03c1.1,0,2.15-.75,2.15-1.94l.13-9.87c0-1.21-1-2.04-2.17-2.05z" fill="white"/>
+        {/* Texte LIFT à droite */}
+        <g fill="var(--text)" transform="translate(86, -688) scale(0.98)">
+          <polygon points="33 787.77 38.96 787.77 38.96 777.53 48.07 777.53 48.07 772.54 38.96 772.54 38.96 766.43 49.62 766.43 49.62 761.44 33 761.44 33 787.77"/>
+          <rect x="54.18" y="761.44" width="5.95" height="26.33"/>
+          <polygon points="64.24 766.43 71.49 766.43 71.49 787.77 77.45 787.77 77.45 766.43 84.69 766.43 84.69 761.44 64.24 761.44 64.24 766.43"/>
+          <polygon points="94.76 776.71 103.74 776.71 103.74 771.72 94.76 771.72 94.76 766.43 105.31 766.43 105.31 761.44 88.81 761.44 88.81 787.77 105.71 787.77 105.71 782.78 94.76 782.78 94.76 776.71"/>
+          <path d="M130.6,769.64c0-6.26-4.58-8.2-10.16-8.2h-9.48v26.33h5.95v-9.48h3.27l5.03,9.48h6.66l-5.96-10.54c2.81-1.27,4.69-3.73,4.69-7.6ZM116.9,766.17h3.05c3.13,0,4.81.87,4.81,3.47s-1.68,3.93-4.81,3.93h-3.05v-7.4Z"/>
+          <path d="M149.39,787.77h6.3l-8.27-26.33h-7.12l-8.27,26.33h6.09l1.63-6.27h8.03l1.62,6.27ZM140.94,776.87l.63-2.44c.73-2.63,1.44-5.71,2.07-8.49h.16c.7,2.75,1.41,5.86,2.14,8.49l.63,2.44h-5.63Z"/>
+        </g>
+        {/* Texte TRACKER en dessous */}
+        <g fill="var(--text2)" fontSize="11" fontFamily="sans-serif" letterSpacing="4">
+          <text x="88" y="72">TRACKER</text>
+        </g>
+      </svg>
       <div style={{fontSize:11,color:'var(--text3)',letterSpacing:2,textTransform:'uppercase',marginBottom:32}}>Choisis ton profil</div>
       {users.length >= 4 && (
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher..." style={{marginBottom:16}} />

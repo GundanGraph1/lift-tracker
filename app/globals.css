@@ -103,7 +103,7 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   display: flex;
   width: 100%;
   max-width: 740px;
-  padding: 6px 4px max(8px, env(safe-area-inset-bottom));
+  padding: 6px 4px 4px;
   gap: 2px;
 }
 .nav-btn {

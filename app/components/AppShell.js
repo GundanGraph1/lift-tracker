@@ -91,8 +91,9 @@ export default function AppShell() {
     actions.setCurrentUser(null)
   }
 
-  const [showMore, setShowMore] = useState(false)
   const [showNavEdit, setShowNavEdit] = useState(false)
+  const [navPage, setNavPage] = useState(0) // page courante du carousel nav
+  const navSwipeRef = { startX: null, startY: null }
 
   // Toutes les pages disponibles
   const ALL_PAGES = [
@@ -120,14 +121,33 @@ export default function AppShell() {
   const [navOrder, setNavOrder] = useState(DEFAULT_NAV)
   useEffect(() => { setNavOrder(getNavOrder()) }, [currentUser?.id])
 
+  // Auto-sync groupe nav si la page active n'est pas visible
+  useEffect(() => {
+    const allNav = [...navOrder.map(k => ALL_PAGES.find(p => p.key === k)).filter(Boolean),
+                    ...ALL_PAGES.filter(p => !navOrder.includes(p.key))]
+    const idx = allNav.findIndex(p => p.key === currentPage)
+    if (idx >= 0) setNavPage(Math.floor(idx / 4))
+  }, [currentPage])
+
   const saveNavOrder = (order) => {
     setNavOrder(order)
     localStorage.setItem(`lt_nav_${currentUser?.id}`, JSON.stringify(order))
+    setNavPage(0)
     setShowNavEdit(false)
   }
 
-  const visiblePages = navOrder.map(k => ALL_PAGES.find(p => p.key === k)).filter(Boolean)
-  const hiddenPages = ALL_PAGES.filter(p => !navOrder.includes(p.key))
+  // Pages préférées (dans l'ordre choisi) + les autres à la suite
+  const favPages = navOrder.map(k => ALL_PAGES.find(p => p.key === k)).filter(Boolean)
+  const extraPages = ALL_PAGES.filter(p => !navOrder.includes(p.key))
+  const allNavPages = [...favPages, ...extraPages]
+  // Groupes de 4 pour le carousel
+  const NAV_GROUP_SIZE = 4
+  const navGroups = []
+  for (let i = 0; i < allNavPages.length; i += NAV_GROUP_SIZE) {
+    navGroups.push(allNavPages.slice(i, i + NAV_GROUP_SIZE))
+  }
+  const currentNavGroup = navGroups[navPage] || navGroups[0] || []
+  const totalNavGroups = navGroups.length
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
 
@@ -180,43 +200,47 @@ export default function AppShell() {
         {currentPage==='sante' && <SantePage />}
       </div>
 
-      {/* Bottom nav */}
-      <nav className="nav-bar">
+      {/* Bottom nav — carousel swipeable */}
+      <nav className="nav-bar"
+        onTouchStart={e => { navSwipeRef.startX = e.touches[0].clientX; navSwipeRef.startY = e.touches[0].clientY }}
+        onTouchEnd={e => {
+          if (navSwipeRef.startX === null) return
+          const dx = e.changedTouches[0].clientX - navSwipeRef.startX
+          const dy = Math.abs(e.changedTouches[0].clientY - navSwipeRef.startY)
+          if (Math.abs(dx) > 40 && dy < 30) {
+            if (dx < 0 && navPage < totalNavGroups - 1) setNavPage(p => p + 1)
+            if (dx > 0 && navPage > 0) setNavPage(p => p - 1)
+          }
+          navSwipeRef.startX = null
+        }}>
         <div className="nav-bar-inner">
-          {visiblePages.map(p => (
-            <button key={p.key} className={`nav-btn${currentPage===p.key?' active':''}`}
-              onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key); setShowMore(false) }}>
+          {currentNavGroup.map(p => (
+            <button key={p.key}
+              className={`nav-btn${currentPage===p.key?' active':''}`}
+              onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key) }}
+              onContextMenu={e => { e.preventDefault(); setShowNavEdit(true) }}
+              onTouchStart={e => { e.currentTarget._lt = setTimeout(() => setShowNavEdit(true), 500) }}
+              onTouchEnd={e => clearTimeout(e.currentTarget._lt)}
+              onTouchMove={e => clearTimeout(e.currentTarget._lt)}>
               <span className="icon">{p.icon}</span>{p.label}
             </button>
           ))}
-
-          {/* Bouton ⋯ Plus */}
-          <div style={{position:'relative'}}>
-            <button
-              className={`nav-btn${(hiddenPages.some(p=>p.key===currentPage)||showMore||showNavEdit)?' active':''}`}
-              onClick={() => { setShowMore(v => !v); setShowNavEdit(false) }}>
-              <span className="icon">⋯</span>Plus
-            </button>
-
-            {showMore && (
-              <div style={{position:'absolute',bottom:'calc(100% + 10px)',right:0,background:'var(--nav-bg, rgba(10,10,10,0.98))',backdropFilter:'var(--nav-blur, blur(20px))',border:'1px solid var(--border2)',borderRadius:16,padding:8,minWidth:160,boxShadow:'0 -8px 32px rgba(0,0,0,0.5)',zIndex:200}}>
-                {hiddenPages.map(p => (
-                  <button key={p.key}
-                    onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key); setShowMore(false) }}
-                    style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'10px 14px',background:currentPage===p.key?'rgba(255,60,60,0.1)':'transparent',border:'none',borderRadius:10,color:currentPage===p.key?'var(--red)':'var(--text2)',fontSize:13,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
-                    <span style={{fontSize:18}}>{p.icon}</span>{p.label}
-                  </button>
-                ))}
-                <div style={{height:1,background:'var(--border)',margin:'6px 8px'}} />
-                <button
-                  onClick={() => { setShowNavEdit(true); setShowMore(false) }}
-                  style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'10px 14px',background:'transparent',border:'none',borderRadius:10,color:'var(--text3)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>
-                  <span style={{fontSize:16}}>⚙️</span>Personnaliser la nav
-                </button>
-              </div>
-            )}
-          </div>
         </div>
+        {/* Dots pagination — visibles seulement si >1 groupe */}
+        {totalNavGroups > 1 && (
+          <div style={{display:'flex',justifyContent:'center',gap:5,paddingBottom:'max(6px,env(safe-area-inset-bottom))',paddingTop:3}}>
+            {navGroups.map((_,i) => (
+              <div key={i} onClick={() => setNavPage(i)} style={{
+                width: i===navPage ? 16 : 5,
+                height:5, borderRadius:3,
+                background: i===navPage ? 'var(--red)' : 'var(--border2)',
+                transition:'all .25s cubic-bezier(.34,1.56,.64,1)',
+                cursor:'pointer',
+                boxShadow: i===navPage ? 'var(--accent-glow,none)' : 'none',
+              }} />
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* Modal personnalisation nav */}

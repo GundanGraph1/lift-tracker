@@ -84,7 +84,7 @@ export default function SantePage() {
   return (
     <div style={{padding:'16px 16px 100px'}}>
       <div className="page-title">SANTÉ</div>
-      <div className="page-sub">Métabolisme & nutrition</div>
+      <div className="page-sub">Métabolisme &amp; nutrition</div>
 
       {incomplete && (
         <div style={{marginTop:16,padding:'12px 14px',background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.25)',borderRadius:12,fontSize:13,color:'#f59e0b'}}>

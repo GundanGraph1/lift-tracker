@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useStore, actions } from '../../lib/store'
-import { db } from '../../lib/supabase'
 
 // Version de la mise à jour — changer ce string à chaque grosse mise à jour
 const UPDATE_VERSION = 'v2-sante-cardio'
@@ -59,7 +58,7 @@ export default function UpdateBanner() {
         }}>🆕 MISE À JOUR</div>
 
         <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--fm)', color: 'var(--text)', marginBottom: 8, lineHeight: 1.2 }}>
-          Cardio & Suivi<br />nutritionnel 💪🏃
+          Cardio &amp; Suivi<br />nutritionnel 💪🏃
         </div>
 
         <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>

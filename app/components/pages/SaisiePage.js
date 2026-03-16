@@ -535,7 +535,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           {/* Estimation calories */}
           {cardioDuration && !cardioCalories && currentUser?.weight_kg && (
             <div style={{padding:'8px 12px',background:'rgba(16,185,129,0.08)',border:'1px solid rgba(16,185,129,0.2)',borderRadius:8,fontSize:12,color:'#10b981'}}>
-              🔥 Estimation : ~{Math.round(({tapis:8,velo:7,rameur:7.5,elliptique:5,corde:10,autre:6}[cardioType]||6) * currentUser.weight_kg * (parseInt(cardioDuration||0)/60))} kcal
+              🔥 Estimation : ~{Math.round(({tapis:8,velo:7,rameur:7.5,elliptique:5,corde:10,autre:6}[cardioType]||6) * currentUser.weight_kg * (parseInt(cardioDuration||0) / 60))} kcal
             </div>
           )}
 
@@ -607,7 +607,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
                 <button onClick={()=>addSet(ex.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 14px',color:'var(--text2)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)'}}>＋ Série</button>
                 {[60,90,120,180].map(s=>(
-                  <button key={s} onClick={()=>startRest(s)} style={{background:restLeft>0&&restTimer===s?'rgba(34,197,94,.2)':'var(--s3)',border:`1px solid ${restLeft>0&&restTimer===s?'var(--green)':'var(--border)'}`,borderRadius:8,padding:'6px 10px',color:restLeft>0&&restTimer===s?'var(--green)':'var(--text3)',fontSize:11,cursor:'pointer',fontFamily:'var(--fb)'}}>⏱ {s>=60?Math.floor(s/60)+'m':''}{s%60||''}</button>
+                  <button key={s} onClick={()=>startRest(s)} style={{background:restLeft>0&&restTimer===s?'rgba(34,197,94,.2)':'var(--s3)',border:`1px solid ${restLeft>0&&restTimer===s?'var(--green)':'var(--border)'}`,borderRadius:8,padding:'6px 10px',color:restLeft>0&&restTimer===s?'var(--green)':'var(--text3)',fontSize:11,cursor:'pointer',fontFamily:'var(--fb)'}}>⏱ {s>=60?`${Math.floor(s / 60)}m`:''}{s%60||''}</button>
                 ))}
               </div>
             </div>
@@ -617,7 +617,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
       {restLeft > 0 && (
         <div style={{background:'rgba(34,197,94,.1)',border:'1px solid var(--green)',borderRadius:12,padding:'12px 16px',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <span style={{color:'var(--green)',fontFamily:'var(--fm)',fontSize:18,fontWeight:700}}>⏱ Repos : {Math.floor(restLeft/60)}:{String(restLeft%60).padStart(2,'0')}</span>
+          <span style={{color:'var(--green)',fontFamily:'var(--fm)',fontSize:18,fontWeight:700}}>⏱ {Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2,'0')}</span>
           <button onClick={()=>setRestLeft(0)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
         </div>
       )}

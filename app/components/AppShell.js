@@ -90,13 +90,12 @@ export default function AppShell() {
     actions.setCurrentUser(null)
   }
 
+  const [showMore, setShowMore] = useState(false)
   const pages = [
     { key:'saisie', icon:'✏️', label:'Saisie' },
     { key:'historique', icon:'📋', label:'Historique' },
     { key:'stats', icon:'📊', label:'Stats' },
     { key:'feed', icon:'👥', label:'Feed' },
-    { key:'calendrier', icon:'📅', label:'Calendrier' },
-    { key:'leaderboard', icon:'🏆', label:'Top' },
     { key:'sante', icon:'❤️', label:'Santé' },
   ]
 
@@ -156,10 +155,28 @@ export default function AppShell() {
         <div className="nav-bar-inner">
           {pages.map(p => (
             <button key={p.key} className={`nav-btn${currentPage===p.key?' active':''}`}
-              onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key) }}>
+              onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key); setShowMore(false) }}>
               <span className="icon">{p.icon}</span>{p.label}
             </button>
           ))}
+          {/* Bouton Plus */}
+          <div style={{position:'relative'}}>
+            <button className={`nav-btn${(currentPage==='calendrier'||currentPage==='leaderboard'||showMore)?' active':''}`}
+              onClick={() => setShowMore(v => !v)}>
+              <span className="icon">⋯</span>Plus
+            </button>
+            {showMore && (
+              <div style={{position:'absolute',bottom:'calc(100% + 10px)',right:0,background:'var(--nav-bg, rgba(10,10,10,0.98))',backdropFilter:'var(--nav-blur, blur(20px))',border:'1px solid var(--border2)',borderRadius:14,padding:8,minWidth:140,boxShadow:'0 -8px 32px rgba(0,0,0,0.5)',zIndex:200}}>
+                {[{key:'calendrier',icon:'📅',label:'Calendrier'},{key:'leaderboard',icon:'🏆',label:'Classement'}].map(p => (
+                  <button key={p.key}
+                    onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key); setShowMore(false) }}
+                    style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'10px 14px',background:currentPage===p.key?'rgba(var(--red-rgb,255,60,60),0.1)':'transparent',border:'none',borderRadius:10,color:currentPage===p.key?'var(--red)':'var(--text2)',fontSize:13,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
+                    <span style={{fontSize:18}}>{p.icon}</span>{p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </nav>
 

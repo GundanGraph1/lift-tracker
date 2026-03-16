@@ -92,9 +92,10 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(10,10,10,.97);
-  backdrop-filter: blur(16px);
-  border-top: 1px solid var(--border);
+  background: var(--nav-bg, rgba(10,10,10,0.95));
+  backdrop-filter: var(--nav-blur, blur(16px));
+  -webkit-backdrop-filter: var(--nav-blur, blur(16px));
+  border-top: 1px solid var(--border2);
   display: flex;
   justify-content: center;
 }
@@ -102,7 +103,8 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   display: flex;
   width: 100%;
   max-width: 740px;
-  padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+  padding: 6px 4px max(8px, env(safe-area-inset-bottom));
+  gap: 2px;
 }
 .nav-btn {
   flex: 1;
@@ -110,7 +112,7 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 5px 0;
+  padding: 6px 2px;
   border: none;
   background: none;
   color: var(--text3);
@@ -120,15 +122,38 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   letter-spacing: .5px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color .15s;
+  transition: color .15s, transform .15s;
+  border-radius: 10px;
+  position: relative;
 }
 .nav-btn .icon {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
-  transition: transform .15s;
+  transition: transform .2s cubic-bezier(.34,1.56,.64,1);
 }
-.nav-btn.active { color: var(--red); }
-.nav-btn.active .icon { transform: scale(1.15); }
+.nav-btn.active {
+  color: var(--red);
+}
+.nav-btn.active .icon {
+  transform: scale(1.2) translateY(-1px);
+}
+.nav-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--red);
+  box-shadow: var(--accent-glow, none);
+}
+
+/* Premium: glow sur icône active */
+[data-premium="1"] .nav-btn.active .icon {
+  filter: drop-shadow(0 0 6px var(--red));
+}
 
 /* ── SYNC BAR ── */
 .sync-bar {
@@ -491,4 +516,24 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   .page-title { font-size: 52px; }
   .page-container { padding: 28px 32px 100px; }
   .app-header { padding: 0 32px; }
+}
+
+/* ── PREMIUM THEME EFFECTS ── */
+[data-premium="1"] .page-container > * {
+  /* Les cards héritent du card-glow si défini */
+}
+[data-premium="1"] [style*="background:'var(--s2)'"],
+[data-premium="1"] [style*='background:"var(--s2)"'] {
+  box-shadow: var(--card-glow, none);
+}
+
+/* Pill indicator sur onglet actif premium */
+[data-premium="1"] .nav-btn.active::after {
+  box-shadow: 0 0 8px var(--red), 0 0 16px var(--red);
+  width: 22px;
+}
+
+/* Smooth transitions thème */
+:root {
+  transition: --bg .3s, --s1 .3s, --s2 .3s;
 }

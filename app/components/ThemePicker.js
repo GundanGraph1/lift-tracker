@@ -69,11 +69,11 @@ export default function ThemePicker({ onClose }) {
           </div>
         </div>
 
-        {/* Color section */}
+        {/* Color section — Standard */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 12 }}>Couleur d'accent</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-            {THEMES.map(t => (
+            {THEMES.filter(t => !t.premium).map(t => (
               <div key={t.key} onClick={() => selectTheme(t.key)} style={{
                 border: `2px solid ${selectedTheme === t.key ? t.preview : 'transparent'}`,
                 borderRadius: 12, padding: 10, cursor: 'pointer', background: 'var(--s2)',
@@ -82,6 +82,52 @@ export default function ThemePicker({ onClose }) {
               }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: t.preview, boxShadow: selectedTheme === t.key ? `0 0 12px ${t.preview}88` : 'none', transition: 'box-shadow .2s' }} />
                 <span style={{ fontSize: 10, fontWeight: 700, color: selectedTheme === t.key ? t.preview : 'var(--text3)', textAlign: 'center' }}>{t.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Premium themes */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase' }}>Thèmes Premium</div>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1, color: '#fbbf24', background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 6, padding: '2px 6px', textTransform: 'uppercase' }}>✦ Exclusif</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {THEMES.filter(t => t.premium).map(t => (
+              <div key={t.key} onClick={() => selectTheme(t.key)} style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '12px 14px', borderRadius: 14, cursor: 'pointer',
+                background: selectedTheme === t.key ? `${t.preview}15` : 'var(--s2)',
+                border: `1.5px solid ${selectedTheme === t.key ? t.preview : 'var(--border2)'}`,
+                transition: 'all .2s',
+                position: 'relative', overflow: 'hidden',
+              }}>
+                {/* Gradient pill */}
+                <div style={{
+                  width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                  background: `linear-gradient(135deg, ${t.preview}, ${t.vars['--accent2'] || t.preview}88)`,
+                  boxShadow: selectedTheme === t.key ? `0 0 16px ${t.preview}66` : 'none',
+                  transition: 'box-shadow .2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18,
+                }}>
+                  {t.key === 'obsidian' ? '⬛' : t.key === 'neon' ? '💠' : t.key === 'titanium' ? '🔩' : t.key === 'aurora' ? '🌌' : t.key === 'ember' ? '🔥' : '👻'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: selectedTheme === t.key ? t.preview : 'var(--text)', marginBottom: 2 }}>{t.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                    {t.key === 'obsidian' ? 'Fond ultra-sombre · Glow rouge discret' :
+                     t.key === 'neon' ? 'Bleu néon · Fond deep space' :
+                     t.key === 'titanium' ? 'Gris acier · Interface épurée' :
+                     t.key === 'aurora' ? 'Vert émeraude · Touches indigo' :
+                     t.key === 'ember' ? 'Orange chaud · Fond braise' :
+                     'Violet · Rose · Dark fantasy'}
+                  </div>
+                </div>
+                {selectedTheme === t.key && (
+                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: t.preview, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#000', fontWeight: 800 }}>✓</div>
+                )}
               </div>
             ))}
           </div>

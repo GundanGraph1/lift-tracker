@@ -15,6 +15,8 @@ export default function EditProfile({ onClose }) {
   const [birthYear, setBirthYear] = useState(currentUser?.birth_year?.toString() || '')
   const [goal, setGoal] = useState(currentUser?.goal || 'maintain')
   const [activityLevel, setActivityLevel] = useState(currentUser?.activity_level || 'moderate')
+  const [dailySteps, setDailySteps] = useState(currentUser?.daily_steps_avg?.toString() || '8000')
+  const [sessionsPerWeek, setSessionsPerWeek] = useState(currentUser?.sessions_per_week?.toString() || '3')
   const [username, setUsername] = useState(currentUser?.username || '')
   const [pin, setPin] = useState('')
   const [photo, setPhoto] = useState(null)
@@ -23,7 +25,6 @@ export default function EditProfile({ onClose }) {
   const [selectedTheme, setSelectedTheme] = useState(initTheme)
   const [selectedFont, setSelectedFont] = useState(initFont)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [showActivityInfo, setShowActivityInfo] = useState(false)
   const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
   const [gender, setGender] = useState(currentUser?.gender || 'male')
 
@@ -69,7 +70,9 @@ export default function EditProfile({ onClose }) {
       weight_kg: weightKg ? parseFloat(weightKg) : null,
       height_cm: heightCm ? parseInt(heightCm) : null,
       birth_year: birthYear ? parseInt(birthYear) : null,
-      goal, activity_level: activityLevel
+      goal, activity_level: activityLevel,
+      daily_steps_avg: dailySteps ? parseInt(dailySteps) : null,
+      sessions_per_week: sessionsPerWeek ? parseInt(sessionsPerWeek) : null,
     }
     if (pin) updates.pin = pin
 
@@ -193,18 +196,16 @@ export default function EditProfile({ onClose }) {
                     ))}
                   </div>
                 </div>
+                {/* ── CRITÈRE 1 : Style de vie ── */}
                 <div>
-                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
-                    <label className="field-label" style={{fontSize:10,marginBottom:0}}>Niveau d'activité</label>
-                    <button onClick={()=>setShowActivityInfo(true)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:'50%',width:16,height:16,fontSize:9,cursor:'pointer',color:'var(--text3)',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:0,flexShrink:0}}>i</button>
-                  </div>
+                  <label className="field-label" style={{fontSize:10}}>Style de vie quotidien</label>
                   <div style={{display:'flex',flexDirection:'column',gap:4}}>
                     {[
-                      {v:'sedentary',l:'🪑 Sédentaire',desc:'Bureau toute la journée, peu de marche'},
-                      {v:'light',l:'🚶 Léger',desc:'1-3 séances/sem + vie peu active'},
-                      {v:'moderate',l:'🏃 Modéré',desc:'3-5 séances/sem + marche quotidienne'},
-                      {v:'active',l:'⚡ Actif',desc:'Sport quasi-quotidien ou boulot debout'},
-                      {v:'very_active',l:'🔥 Très actif',desc:'Sport intense + travail physique'},
+                      {v:'sedentary', l:'🪑 Sédentaire',    desc:'Assis la majorité du temps'},
+                      {v:'light',     l:'🚶 Peu actif',      desc:'Quelques déplacements, peu de marche'},
+                      {v:'moderate',  l:'🏃 Modéré',         desc:'Debout régulièrement, marche dans la journée'},
+                      {v:'active',    l:'⚡ Actif',           desc:'Toujours en mouvement, boulot physique'},
+                      {v:'very_active',l:'🔥 Très actif',    desc:'Travail physique intense toute la journée'},
                     ].map(a=>(
                       <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'var(--s1)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
                         <span>{a.l}</span>
@@ -213,163 +214,44 @@ export default function EditProfile({ onClose }) {
                     ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Modale info niveau d'activité */}
-              {showActivityInfo && (
-                <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:200,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setShowActivityInfo(false)}>
-                  <div style={{background:'var(--bg)',borderRadius:'20px 20px 0 0',padding:'20px 16px 40px',width:'100%',maxWidth:500,maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
-                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
-                      <div style={{fontSize:15,fontWeight:800,color:'var(--text)',fontFamily:'var(--fm)'}}>Quel est ton niveau d'activité ?</div>
-                      <button onClick={()=>setShowActivityInfo(false)} style={{background:'var(--s2)',border:'none',borderRadius:8,padding:'4px 10px',cursor:'pointer',color:'var(--text3)',fontSize:13}}>✕</button>
-                    </div>
-                    <div style={{fontSize:11,color:'var(--text3)',marginBottom:14,lineHeight:1.5}}>
-                      Ce n'est pas juste le sport — c'est toute ton activité de la journée combinée (marche, boulot, séances...).
-                    </div>
+                {/* ── CRITÈRE 2 : Pas par jour ── */}
+                <div>
+                  <label className="field-label" style={{fontSize:10}}>Pas moyens par jour</label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {[
-                      {
-                        v:'sedentary', l:'🪑 Sédentaire', color:'#60a5fa',
-                        steps:'< 5 000 pas/jour',
-                        qui:'Boulot de bureau, voiture, peu de déplacements à pied.',
-                        sport:'0-1 séance/sem ou aucun sport.',
-                        exemple:'Développeur, comptable, chauffeur assis toute la journée.',
-                      },
-                      {
-                        v:'light', l:'🚶 Légèrement actif', color:'#34d399',
-                        steps:'5 000 – 8 000 pas/jour',
-                        qui:'Tu marches un peu mais la majorité de ta journée est sédentaire.',
-                        sport:'1-3 séances/sem, activité légère.',
-                        exemple:'Tu vas à la salle 2x/sem mais tu restes assis au bureau le reste du temps.',
-                      },
-                      {
-                        v:'moderate', l:'🏃 Modérément actif', color:'#f59e0b',
-                        steps:'8 000 – 12 000 pas/jour',
-                        qui:'Tu bouges régulièrement, tu marches souvent, tu fais du sport.',
-                        sport:'3-5 séances/sem.',
-                        exemple:'Salle 4x/sem + tu marches pour aller au taf ou tu es debout une partie de la journée.',
-                      },
-                      {
-                        v:'active', l:'⚡ Actif', color:'#f97316',
-                        steps:'12 000 – 15 000 pas/jour',
-                        qui:'Sport quasi-quotidien ou boulot physique, toujours en mouvement.',
-                        sport:'6-7 séances/sem ou boulot debout/en déplacement.',
-                        exemple:"Serveur, maçon, coach sportif, ou tu t'entraînes tous les jours.",
-                      },
-                      {
-                        v:'very_active', l:'🔥 Très actif', color:'#ef4444',
-                        steps:'> 15 000 pas/jour',
-                        qui:'Sport intense + boulot physique. Ton corps est en mouvement toute la journée.',
-                        sport:'2 séances/jour ou athlète de haut niveau.',
-                        exemple:"Maçon qui s'entraîne le soir, militaire, sportif pro.",
-                      },
-                    ].map(a => (
-                      <div key={a.v} onClick={()=>{setActivityLevel(a.v);setShowActivityInfo(false)}} style={{marginBottom:10,padding:'12px 14px',background:activityLevel===a.v?'var(--s1)':'var(--s2)',border:`1.5px solid ${activityLevel===a.v?a.color:'var(--border)'}`,borderRadius:12,cursor:'pointer',transition:'all .15s'}}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
-                          <div style={{fontSize:13,fontWeight:700,color:activityLevel===a.v?a.color:'var(--text)'}}>{a.l}</div>
-                          <div style={{fontSize:11,fontWeight:700,color:a.color,background:`${a.color}18`,padding:'2px 8px',borderRadius:6}}>{a.steps}</div>
-                        </div>
-                        <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>{a.qui}</div>
-                        <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>🏋️ {a.sport}</div>
-                        <div style={{fontSize:11,color:'var(--text3)',fontStyle:'italic'}}>Ex : {a.exemple}</div>
-                      </div>
+                      {v:'3000', l:'< 5k',  desc:'< 5 000'},
+                      {v:'6500', l:'5-8k',  desc:'5 000 – 8 000'},
+                      {v:'10000',l:'8-12k', desc:'8 000 – 12 000'},
+                      {v:'13500',l:'12-15k',desc:'12 000 – 15 000'},
+                      {v:'17000',l:'15k+',  desc:'> 15 000'},
+                    ].map(s=>(
+                      <button key={s.v} onClick={()=>setDailySteps(s.v)} style={{flex:'1 1 18%',padding:'8px 4px',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:8,border:`1px solid ${dailySteps===s.v?'var(--red)':'var(--border)'}`,background:dailySteps===s.v?'var(--red)':'var(--s3)',color:dailySteps===s.v?'white':'var(--text2)',transition:'all .15s',textAlign:'center'}}>
+                        <div>{s.l}</div>
+                        <div style={{fontSize:9,fontWeight:400,opacity:0.7,marginTop:2}}>{s.desc}</div>
+                      </button>
                     ))}
                   </div>
                 </div>
-              )}
+
+                {/* ── CRITÈRE 3 : Séances par semaine ── */}
+                <div>
+                  <label className="field-label" style={{fontSize:10}}>Séances de sport / semaine</label>
+                  <div style={{display:'flex',gap:6}}>
+                    {[
+                      {v:'0', l:'0'},
+                      {v:'2', l:'1-2'},
+                      {v:'4', l:'3-4'},
+                      {v:'6', l:'5-6'},
+                      {v:'7', l:'7+'},
+                    ].map(s=>(
+                      <button key={s.v} onClick={()=>setSessionsPerWeek(s.v)} style={{flex:1,padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:8,border:`1px solid ${sessionsPerWeek===s.v?'var(--red)':'var(--border)'}`,background:sessionsPerWeek===s.v?'var(--red)':'var(--s3)',color:sessionsPerWeek===s.v?'white':'var(--text2)',transition:'all .15s'}}>
+                        {s.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
 
               <button className="btn-primary" onClick={save} disabled={saving} style={{ marginTop: 4 }}>
-                {saving ? '⏳ Sauvegarde...' : '💾 Enregistrer'}
-              </button>
-
-              {/* Private mode */}
-              <div onClick={()=>setIsPrivate(p=>!p)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:'var(--s2)',border:`1px solid ${isPrivate?'var(--purple)':'var(--border)'}`,borderRadius:12,cursor:'pointer',transition:'all .2s'}}>
-                <div>
-                  <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>🔒 Mode privé</div>
-                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>Ne pas apparaître dans le classement</div>
-                </div>
-                <div style={{width:44,height:24,borderRadius:12,background:isPrivate?'var(--purple)':'var(--s3)',border:'1px solid var(--border2)',position:'relative',transition:'background .2s',flexShrink:0}}>
-                  <div style={{position:'absolute',top:3,left:isPrivate?22:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'left .2s'}}/>
-                </div>
-              </div>
-
-              {/* Delete */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
-                <button onClick={deleteProfile} style={{
-                  width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
-                  background: confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.1)',
-                  border: `1px solid ${confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.3)'}`,
-                  color: 'var(--red)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
-                  transition: 'all .2s'
-                }}>
-                  {confirmDelete ? '⚠️ Confirmer la suppression' : '🗑 Supprimer le profil'}
-                </button>
-                {confirmDelete && <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 6 }}>Toutes tes données seront supprimées définitivement</div>}
-              </div>
-            </div>
-          )}
-
-          {/* ── THEME TAB ── */}
-          {tab === 'theme' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-              {/* Preview */}
-              <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 14, padding: 14, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--fm)', fontSize: 28, fontWeight: 800, color: 'var(--red)', letterSpacing: 2, textTransform: 'uppercase' }}>LIFT TRACKER</div>
-                <div style={{ fontFamily: 'var(--fb)', fontSize: 12, color: 'var(--text2)', marginTop: 3 }}>{currentThemeObj.name} · {currentFontObj.name}</div>
-                <div style={{ display: 'flex', gap: 5, justifyContent: 'center', marginTop: 8, flexWrap: 'wrap' }}>
-                  <div style={{ background: 'var(--s3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text2)' }}>Dos</div>
-                  <div style={{ background: 'var(--red)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'white', fontWeight: 700 }}>Actif</div>
-                  <div style={{ background: 'var(--s3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: 'var(--text2)' }}>Stats</div>
-                </div>
-              </div>
-
-              {/* Colors */}
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 10 }}>Couleur</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                  {THEMES.map(t => (
-                    <div key={t.key} onClick={() => selectTheme(t.key)} style={{
-                      border: `2px solid ${selectedTheme === t.key ? t.preview : 'transparent'}`,
-                      borderRadius: 12, padding: '10px 6px', cursor: 'pointer', background: 'var(--s2)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, transition: 'all .15s',
-                    }}>
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: t.preview, boxShadow: selectedTheme === t.key ? `0 0 10px ${t.preview}88` : 'none' }} />
-                      <span style={{ fontSize: 9, fontWeight: 700, color: selectedTheme === t.key ? t.preview : 'var(--text3)', textAlign: 'center', lineHeight: 1.2 }}>{t.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Fonts */}
-              <div>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 10 }}>Police</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {FONT_PACKS.map(f => (
-                    <div key={f.key} onClick={() => selectFont(f.key)} style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
-                      background: selectedFont === f.key ? `${currentThemeObj.preview}15` : 'var(--s2)',
-                      border: `1px solid ${selectedFont === f.key ? 'var(--red)' : 'var(--border)'}`,
-                      transition: 'all .15s',
-                    }}>
-                      <div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: selectedFont === f.key ? 'var(--red)' : 'var(--text)', lineHeight: 1, marginBottom: 1 }}>{f.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>{f.sub}</div>
-                      </div>
-                      {selectedFont === f.key && <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white' }}>✓</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button className="btn-primary" onClick={save} disabled={saving}>
-                {saving ? '⏳ Sauvegarde...' : '💾 Appliquer'}
-              </button>
-            </div>
-          )}
-
-        </div>
-      </div>
-    </div>
-  )
-}

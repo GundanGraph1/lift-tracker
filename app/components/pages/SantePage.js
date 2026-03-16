@@ -4,19 +4,26 @@ import { useState, useEffect, useRef } from 'react'
 import { db } from '../../../lib/supabase'
 import { showToast } from '../Toast'
 
-const ACTIVITY_MULTIPLIER = {
-  sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, very_active: 1.9,
+// Multiplicateur style de vie (NEAT de base)
+const LIFESTYLE_MULT = {
+  sedentary: 1.15, light: 1.25, moderate: 1.35, active: 1.50, very_active: 1.65,
 }
+// Bonus séances sport (TEF + EAT)
+const SESSION_BONUS = { 0: 0, 2: 0.05, 4: 0.10, 6: 0.15, 7: 0.20 }
+// Bonus pas (NEAT marche)
+const STEPS_BONUS = { 3000: 0, 6500: 0.04, 10000: 0.09, 13500: 0.14, 17000: 0.20 }
 const GOAL_CONFIG = {
   bulk:     { label: '💪 Prise de masse', kcalDelta: +300, protein: 2.2, fat: 0.9, color: '#3b82f6', weeklyKg: +0.25 },
   cut:      { label: '🔥 Sèche',          kcalDelta: -400, protein: 2.5, fat: 0.8, color: '#ef4444', weeklyKg: -0.35 },
   recomp:   { label: '⚖️ Recomposition',  kcalDelta:    0, protein: 2.3, fat: 0.9, color: '#a855f7', weeklyKg:  0    },
   maintain: { label: '🎯 Maintien',        kcalDelta:    0, protein: 1.8, fat: 1.0, color: '#10b981', weeklyKg:  0    },
 }
-const ACTIVITY_LABELS = {
-  sedentary: '🪑 Sédentaire', light: '🚶 Léger', moderate: '🏃 Modéré',
+const LIFESTYLE_LABELS = {
+  sedentary: '🪑 Sédentaire', light: '🚶 Peu actif', moderate: '🏃 Modéré',
   active: '⚡ Actif', very_active: '🔥 Très actif',
 }
+const STEPS_LABELS = { 3000:'< 5 000 pas', 6500:'5-8k pas', 10000:'8-12k pas', 13500:'12-15k pas', 17000:'> 15k pas' }
+const SESSION_LABELS = { 0:'0 séance/sem', 2:'1-2/sem', 4:'3-4/sem', 6:'5-6/sem', 7:'7+/sem' }
 
 function getFeedbackMsg(delta, goal, gender) {
   const f = gender === 'female'
@@ -133,7 +140,16 @@ function WeightChart({ logs, goalCfg }) {
 export default function SantePage() {
   const currentUser = useStore(s => s.currentUser)
   const cardioSessions = useStore(s => s.cardioSessions || [])
-  const { weight_kg: w, height_cm: h, birth_year: by, gender, goal = 'maintain', activity_level = 'moderate' } = currentUser || {}
+  const {
+    weight_kg: w, height_cm: h, birth_year: by, gender,
+    goal = 'maintain',
+    activity_level = 'moderate',
+    daily_steps_avg,
+    sessions_per_week,
+  } = currentUser || {}
+  // Normaliser les valeurs aux clés connues
+  const stepsKey = [3000,6500,10000,13500,17000].reduce((best, k) => Math.abs(k-(daily_steps_avg||8000)) < Math.abs(best-(daily_steps_avg||8000)) ? k : best, 10000)
+  const sessKey  = [0,2,4,6,7].reduce((best, k) => Math.abs(k-(sessions_per_week||3)) < Math.abs(best-(sessions_per_week||3)) ? k : best, 4)
   const age = by ? new Date().getFullYear() - by : null
   const incomplete = !w || !h || !age
 
@@ -187,7 +203,9 @@ export default function SantePage() {
 
   let bmr = null
   if (!incomplete) bmr = gender === 'female' ? 10*w + 6.25*h - 5*age - 161 : 10*w + 6.25*h - 5*age + 5
-  const tdee = bmr ? Math.round(bmr * ACTIVITY_MULTIPLIER[activity_level]) : null
+  // TDEE = BMR × (style de vie + bonus pas + bonus séances)
+  const totalMult = bmr ? (LIFESTYLE_MULT[activity_level] || 1.35) + (STEPS_BONUS[stepsKey] || 0) + (SESSION_BONUS[sessKey] || 0) : null
+  const tdee = bmr ? Math.round(bmr * totalMult) : null
   const goalCfg = GOAL_CONFIG[goal]
   const targetKcal = tdee ? tdee + goalCfg.kcalDelta : null
   let proteinG = null, fatG = null, carbG = null
@@ -338,7 +356,7 @@ export default function SantePage() {
           <div style={{marginBottom:8,fontSize:11,color:'var(--text3)',letterSpacing:1,fontWeight:700}}>MÉTABOLISME</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
             {card('Métabolisme de base', `${Math.round(bmr)} kcal`, 'Au repos complet')}
-            {card('Dépense totale (TDEE)', `${tdee} kcal`, ACTIVITY_LABELS[activity_level])}
+            {card('Dépense totale (TDEE)', `${tdee} kcal`, `${LIFESTYLE_LABELS[activity_level]} · ${STEPS_LABELS[stepsKey]} · ${SESSION_LABELS[sessKey]}`)}
           </div>
           {imc && (
             <div style={{marginTop:10,padding:'12px 16px',background:'var(--s2)',borderRadius:12,border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>

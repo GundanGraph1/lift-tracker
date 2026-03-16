@@ -14,6 +14,7 @@ import CalendrierPage from './pages/CalendrierPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import SantePage from './pages/SantePage'
 import UpdateBanner from './UpdateBanner'
+import NavEditor from './NavEditor'
 
 export default function AppShell() {
   const currentUser = useStore(s => s.currentUser)
@@ -91,13 +92,42 @@ export default function AppShell() {
   }
 
   const [showMore, setShowMore] = useState(false)
-  const pages = [
-    { key:'saisie', icon:'✏️', label:'Saisie' },
-    { key:'historique', icon:'📋', label:'Historique' },
-    { key:'stats', icon:'📊', label:'Stats' },
-    { key:'feed', icon:'👥', label:'Feed' },
-    { key:'sante', icon:'❤️', label:'Santé' },
+  const [showNavEdit, setShowNavEdit] = useState(false)
+
+  // Toutes les pages disponibles
+  const ALL_PAGES = [
+    { key:'saisie',      icon:'✏️',  label:'Saisie' },
+    { key:'historique',  icon:'📋',  label:'Historique' },
+    { key:'stats',       icon:'📊',  label:'Stats' },
+    { key:'feed',        icon:'👥',  label:'Feed' },
+    { key:'sante',       icon:'❤️',  label:'Santé' },
+    { key:'calendrier',  icon:'📅',  label:'Calendrier' },
+    { key:'leaderboard', icon:'🏆',  label:'Classement' },
   ]
+
+  // Nav order sauvegardée par user (4 onglets visibles)
+  const DEFAULT_NAV = ['saisie','historique','stats','feed']
+  const getNavOrder = () => {
+    try {
+      const saved = localStorage.getItem(`lt_nav_${currentUser?.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed) && parsed.length >= 2) return parsed.slice(0,4)
+      }
+    } catch {}
+    return DEFAULT_NAV
+  }
+  const [navOrder, setNavOrder] = useState(DEFAULT_NAV)
+  useEffect(() => { setNavOrder(getNavOrder()) }, [currentUser?.id])
+
+  const saveNavOrder = (order) => {
+    setNavOrder(order)
+    localStorage.setItem(`lt_nav_${currentUser?.id}`, JSON.stringify(order))
+    setShowNavEdit(false)
+  }
+
+  const visiblePages = navOrder.map(k => ALL_PAGES.find(p => p.key === k)).filter(Boolean)
+  const hiddenPages = ALL_PAGES.filter(p => !navOrder.includes(p.key))
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
 
@@ -153,32 +183,51 @@ export default function AppShell() {
       {/* Bottom nav */}
       <nav className="nav-bar">
         <div className="nav-bar-inner">
-          {pages.map(p => (
+          {visiblePages.map(p => (
             <button key={p.key} className={`nav-btn${currentPage===p.key?' active':''}`}
               onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key); setShowMore(false) }}>
               <span className="icon">{p.icon}</span>{p.label}
             </button>
           ))}
-          {/* Bouton Plus */}
+
+          {/* Bouton ⋯ Plus */}
           <div style={{position:'relative'}}>
-            <button className={`nav-btn${(currentPage==='calendrier'||currentPage==='leaderboard'||showMore)?' active':''}`}
-              onClick={() => setShowMore(v => !v)}>
+            <button
+              className={`nav-btn${(hiddenPages.some(p=>p.key===currentPage)||showMore||showNavEdit)?' active':''}`}
+              onClick={() => { setShowMore(v => !v); setShowNavEdit(false) }}>
               <span className="icon">⋯</span>Plus
             </button>
+
             {showMore && (
-              <div style={{position:'absolute',bottom:'calc(100% + 10px)',right:0,background:'var(--nav-bg, rgba(10,10,10,0.98))',backdropFilter:'var(--nav-blur, blur(20px))',border:'1px solid var(--border2)',borderRadius:14,padding:8,minWidth:140,boxShadow:'0 -8px 32px rgba(0,0,0,0.5)',zIndex:200}}>
-                {[{key:'calendrier',icon:'📅',label:'Calendrier'},{key:'leaderboard',icon:'🏆',label:'Classement'}].map(p => (
+              <div style={{position:'absolute',bottom:'calc(100% + 10px)',right:0,background:'var(--nav-bg, rgba(10,10,10,0.98))',backdropFilter:'var(--nav-blur, blur(20px))',border:'1px solid var(--border2)',borderRadius:16,padding:8,minWidth:160,boxShadow:'0 -8px 32px rgba(0,0,0,0.5)',zIndex:200}}>
+                {hiddenPages.map(p => (
                   <button key={p.key}
                     onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key); setShowMore(false) }}
-                    style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'10px 14px',background:currentPage===p.key?'rgba(var(--red-rgb,255,60,60),0.1)':'transparent',border:'none',borderRadius:10,color:currentPage===p.key?'var(--red)':'var(--text2)',fontSize:13,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
+                    style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'10px 14px',background:currentPage===p.key?'rgba(255,60,60,0.1)':'transparent',border:'none',borderRadius:10,color:currentPage===p.key?'var(--red)':'var(--text2)',fontSize:13,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>
                     <span style={{fontSize:18}}>{p.icon}</span>{p.label}
                   </button>
                 ))}
+                <div style={{height:1,background:'var(--border)',margin:'6px 8px'}} />
+                <button
+                  onClick={() => { setShowNavEdit(true); setShowMore(false) }}
+                  style={{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'10px 14px',background:'transparent',border:'none',borderRadius:10,color:'var(--text3)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>
+                  <span style={{fontSize:16}}>⚙️</span>Personnaliser la nav
+                </button>
               </div>
             )}
           </div>
         </div>
       </nav>
+
+      {/* Modal personnalisation nav */}
+      {showNavEdit && (
+        <NavEditor
+          allPages={ALL_PAGES}
+          navOrder={navOrder}
+          onSave={saveNavOrder}
+          onClose={() => setShowNavEdit(false)}
+        />
+      )}
 
       {/* Edit Profile Modal */}
       {showEdit && <EditProfile onClose={() => setShowEdit(false)} />}

@@ -2,9 +2,7 @@
 import { useState } from 'react'
 
 export default function NavEditor({ allPages, navOrder, onSave, onClose }) {
-  const [favs, setFavs] = useState([...navOrder]) // 3 onglets principaux
-  const [dragIdx, setDragIdx] = useState(null)
-  const [overIdx, setOverIdx] = useState(null)
+  const [favs, setFavs] = useState([...navOrder])
 
   const extraPages = allPages.filter(p => !favs.includes(p.key))
 
@@ -18,15 +16,14 @@ export default function NavEditor({ allPages, navOrder, onSave, onClose }) {
     }
   }
 
-  const onDragStart = (i) => setDragIdx(i)
-  const onDragOver = (e, i) => { e.preventDefault(); setOverIdx(i) }
-  const onDrop = (i) => {
-    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setOverIdx(null); return }
-    const next = [...favs]
-    const [moved] = next.splice(dragIdx, 1)
-    next.splice(i, 0, moved)
-    setFavs(next)
-    setDragIdx(null); setOverIdx(null)
+  const moveUp = (i) => {
+    if (i === 0) return
+    setFavs(f => { const n = [...f]; [n[i-1], n[i]] = [n[i], n[i-1]]; return n })
+  }
+
+  const moveDown = (i) => {
+    if (i === favs.length - 1) return
+    setFavs(f => { const n = [...f]; [n[i], n[i+1]] = [n[i+1], n[i]]; return n })
   }
 
   const allOrdered = [...favs.map(k => allPages.find(p => p.key === k)).filter(Boolean), ...extraPages]
@@ -50,37 +47,50 @@ export default function NavEditor({ allPages, navOrder, onSave, onClose }) {
           PERSONNALISER LA NAVIGATION
         </div>
         <div style={{fontSize:12,color:'var(--text3)',marginBottom:20}}>
-          3 onglets toujours visibles · Swipe pour accéder aux autres · Glisse pour réordonner
+          3 onglets toujours visibles · Swipe pour accéder aux autres · Flèches pour réordonner
         </div>
 
-        {/* Chips draggables */}
         <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:'var(--text3)',textTransform:'uppercase',marginBottom:10}}>
           Onglets principaux ({favs.length}/3)
         </div>
-        <div style={{display:'flex',gap:8,marginBottom:20,flexWrap:'wrap'}}>
+        <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
           {favs.map((key, i) => {
             const p = allPages.find(x => x.key === key)
             if (!p) return null
             return (
-              <div key={key} draggable
-                onDragStart={() => onDragStart(i)}
-                onDragOver={e => onDragOver(e, i)}
-                onDrop={() => onDrop(i)}
-                style={{
-                  display:'flex', alignItems:'center', gap:6,
-                  padding:'8px 12px',
-                  background: overIdx===i && dragIdx!==i ? 'rgba(255,60,60,0.12)' : 'var(--s3)',
-                  border:`1.5px solid ${overIdx===i && dragIdx!==i ? 'var(--red)' : 'var(--border2)'}`,
-                  borderRadius:10, cursor:'grab',
-                  opacity: dragIdx===i ? 0.35 : 1,
-                  transition:'all .15s', userSelect:'none',
-                }}>
-                <span style={{fontSize:9,color:'var(--text3)',fontFamily:'monospace',lineHeight:1}}>⠿</span>
-                <span style={{fontSize:16}}>{p.icon}</span>
-                <span style={{fontSize:12,fontWeight:700,color:'var(--text2)',fontFamily:'var(--fb)'}}>{p.label}</span>
+              <div key={key} style={{
+                display:'flex', alignItems:'center', gap:8,
+                padding:'10px 12px',
+                background:'var(--s3)',
+                border:'1.5px solid var(--red)',
+                borderRadius:12,
+              }}>
+                <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                  <button onClick={() => moveUp(i)} disabled={i===0} style={{
+                    background:'none', border:'none', cursor: i===0?'default':'pointer',
+                    fontSize:12, color: i===0?'var(--border2)':'var(--text2)',
+                    padding:'2px 4px', lineHeight:1,
+                  }}>▲</button>
+                  <button onClick={() => moveDown(i)} disabled={i===favs.length-1} style={{
+                    background:'none', border:'none', cursor: i===favs.length-1?'default':'pointer',
+                    fontSize:12, color: i===favs.length-1?'var(--border2)':'var(--text2)',
+                    padding:'2px 4px', lineHeight:1,
+                  }}>▼</button>
+                </div>
+                <div style={{
+                  width:20, height:20, borderRadius:'50%',
+                  background:'var(--red)', color:'white',
+                  fontSize:11, fontWeight:800, fontFamily:'var(--fb)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  flexShrink:0,
+                }}>{i+1}</div>
+                <span style={{fontSize:18}}>{p.icon}</span>
+                <span style={{fontSize:13,fontWeight:700,color:'var(--text)',fontFamily:'var(--fb)',flex:1}}>{p.label}</span>
                 <button onClick={() => toggleFav(key)} style={{
-                  background:'none', border:'none', color:'var(--text3)',
-                  fontSize:13, cursor:'pointer', padding:'0 0 0 2px', lineHeight:1,
+                  background:'var(--s2)', border:'1px solid var(--border)',
+                  borderRadius:6, color:'var(--text3)',
+                  fontSize:12, cursor: favs.length<=2?'not-allowed':'pointer',
+                  padding:'4px 8px', lineHeight:1,
                   opacity: favs.length<=2 ? 0.25 : 1,
                 }}>✕</button>
               </div>
@@ -88,7 +98,6 @@ export default function NavEditor({ allPages, navOrder, onSave, onClose }) {
           })}
         </div>
 
-        {/* Pages secondaires */}
         {extraPages.length > 0 && (
           <>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:'var(--text3)',textTransform:'uppercase',marginBottom:10}}>
@@ -108,14 +117,13 @@ export default function NavEditor({ allPages, navOrder, onSave, onClose }) {
                   }}>
                   <span style={{fontSize:20}}>{p.icon}</span>
                   <span style={{fontSize:13,fontWeight:600,color:'var(--text3)',fontFamily:'var(--fb)',flex:1}}>{p.label}</span>
-                  <span style={{fontSize:11,color:'var(--text3)',opacity:0.6}}>↑ Mettre en avant</span>
+                  <span style={{fontSize:11,color:'var(--text3)',opacity:0.6}}>+ Mettre en avant</span>
                 </button>
               ))}
             </div>
           </>
         )}
 
-        {/* Aperçu barre */}
         <div style={{marginBottom:20}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:2,color:'var(--text3)',textTransform:'uppercase',marginBottom:10}}>
             Aperçu de la barre
@@ -124,33 +132,22 @@ export default function NavEditor({ allPages, navOrder, onSave, onClose }) {
             background:'var(--s2)', border:'1px solid var(--border)',
             borderRadius:14, padding:'12px 8px 8px', overflow:'hidden',
           }}>
-            {/* Fenêtre scrollable simulée */}
-            <div style={{display:'flex', width:`${allOrdered.length * 100/3}%`, transition:'transform .3s'}}>
-              {allOrdered.map((p,i) => (
+            <div style={{display:'flex', justifyContent:'space-around'}}>
+              {allOrdered.slice(0,3).map((p) => (
                 <div key={p.key} style={{
-                  width:`${100/allOrdered.length}%`, flexShrink:0,
                   display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-                  padding:'4px 0',
-                  opacity: i < 3 ? 1 : 0.35,
+                  padding:'4px 8px', flex:1,
                 }}>
                   <span style={{fontSize:20}}>{p.icon}</span>
-                  <span style={{fontSize:8,fontWeight:700,color: i<3?'var(--text2)':'var(--text3)',textTransform:'uppercase',fontFamily:'var(--fb)'}}>{p.label}</span>
+                  <span style={{fontSize:8,fontWeight:700,color:'var(--red)',textTransform:'uppercase',fontFamily:'var(--fb)'}}>{p.label}</span>
                 </div>
               ))}
             </div>
-            {/* Dots */}
-            <div style={{display:'flex',justifyContent:'center',gap:4,marginTop:6}}>
-              {allOrdered.map((_,i) => (
-                <div key={i} style={{
-                  width: i<3?5:3, height: i<3?5:3, borderRadius:'50%',
-                  background: i<3?'var(--red)':'var(--border2)',
-                  opacity: i<3?1:0.4, transition:'all .2s',
-                }}/>
-              ))}
-            </div>
-          </div>
-          <div style={{fontSize:11,color:'var(--text3)',textAlign:'center',marginTop:6}}>
-            ← swipe sur la barre pour voir les autres onglets →
+            {allOrdered.length > 3 && (
+              <div style={{fontSize:10,color:'var(--text3)',textAlign:'center',marginTop:6}}>
+                + {allOrdered.length - 3} autres par swipe →
+              </div>
+            )}
           </div>
         </div>
 

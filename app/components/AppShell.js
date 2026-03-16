@@ -132,16 +132,25 @@ export default function AppShell() {
   const extraPages = ALL_PAGES.filter(p => !navOrder.includes(p.key))
   const allNavPages = [...favPages, ...extraPages] // 7 pages total
 
-  // ── Swipe physique avec inertie ──
-  const [navOffset, setNavOffset] = useState(0)   // offset en px (0 = page 0)
-  const [navDrag, setNavDrag] = useState(0)        // delta en cours de drag
+  // ── Détection desktop (pas de touch) ──
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const check = () => setIsDesktop(window.matchMedia('(hover: hover) and (pointer: fine)').matches)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
+  // ── Swipe physique avec inertie (mobile uniquement) ──
+  const [navOffset, setNavOffset] = useState(0)
+  const [navDrag, setNavDrag] = useState(0)
   const swipe = useRef({ x0: null, y0: null, t0: null, vx: 0 })
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
   const getTabW = () => typeof window !== 'undefined' ? Math.floor(window.innerWidth / 3) : 120
   const getMaxOff = (n) => Math.max(0, (n - 3) * getTabW())
 
   const navTranslateX = clamp(-(navOffset - navDrag), -getMaxOff(allNavPages.length), 0)
-  const navActivePage = Math.round(navOffset / getTabW()) // index du 1er onglet visible
+  const navActivePage = Math.round(navOffset / getTabW())
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
 
@@ -194,24 +203,24 @@ export default function AppShell() {
         {currentPage==='sante' && <SantePage />}
       </div>
 
-      {/* Bottom nav — swipe physique avec inertie */}
+      {/* Bottom nav */}
       <nav className="nav-bar"
-        onTouchStart={e => {
+        onTouchStart={!isDesktop ? e => {
           const t = e.touches[0]
           swipe.current.x0 = t.clientX; swipe.current.y0 = t.clientY
           swipe.current.t0 = Date.now(); swipe.current.vx = 0
-        }}
-        onTouchMove={e => {
+        } : undefined}
+        onTouchMove={!isDesktop ? e => {
           if (swipe.current.x0 === null) return
           const dx = e.touches[0].clientX - swipe.current.x0
           const dy = Math.abs(e.touches[0].clientY - swipe.current.y0)
-          if (dy > Math.abs(dx) + 8) return // scroll vertical prioritaire
+          if (dy > Math.abs(dx) + 8) return
           e.preventDefault()
           const now = Date.now()
           swipe.current.vx = (e.touches[0].clientX - swipe.current.x0) / Math.max(1, now - swipe.current.t0)
           setNavDrag(dx)
-        }}
-        onTouchEnd={() => {
+        } : undefined}
+        onTouchEnd={!isDesktop ? () => {
           if (swipe.current.x0 === null) return
           const tabW = getTabW()
           const maxOff = getMaxOff(allNavPages.length)
@@ -222,51 +231,62 @@ export default function AppShell() {
           setNavOffset(clamp(snapped, 0, maxOff))
           setNavDrag(0)
           swipe.current.x0 = null
-        }}
-        style={{touchAction:'pan-y'}}>
-        <div style={{
-          overflow:'hidden',
-          width:'100%',
-          position:'relative',
-        }}>
-          <div style={{
-            display:'flex',
-            width: `${allNavPages.length * 100 / 3}%`,
-            transform: `translateX(${navTranslateX}px)`,
-            transition: navDrag !== 0 ? 'none' : 'transform .35s cubic-bezier(.25,.46,.45,.94)',
-            willChange:'transform',
-          }}>
-            {allNavPages.map((p,i) => (
+        } : undefined}
+        style={{touchAction: isDesktop ? 'auto' : 'pan-y'}}>
+
+        {isDesktop ? (
+          /* ── Desktop : tous les onglets visibles d'un coup ── */
+          <div style={{display:'flex',width:'100%',maxWidth:740,margin:'0 auto',padding:'4px 0'}}>
+            {allNavPages.map(p => (
               <button key={p.key}
                 className={`nav-btn${currentPage===p.key?' active':''}`}
-                style={{width:`${100/allNavPages.length}%`, flexShrink:0}}
+                style={{flex:1}}
                 onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key) }}
-                onContextMenu={e => { e.preventDefault(); setShowNavEdit(true) }}
-                onTouchStart={e => { e.currentTarget._lt = setTimeout(() => setShowNavEdit(true), 600) }}
-                onTouchEnd={e => clearTimeout(e.currentTarget._lt)}
-                onTouchMove={e => clearTimeout(e.currentTarget._lt)}>
+                onContextMenu={e => { e.preventDefault(); setShowNavEdit(true) }}>
                 <span className="icon">{p.icon}</span>{p.label}
               </button>
             ))}
           </div>
-        </div>
-        {/* Dots — discrets, 1 par page visible */}
-        {allNavPages.length > 3 && (
-          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:4,padding:'3px 0 max(6px,env(safe-area-inset-bottom))'}}>
-            {allNavPages.map((_,i) => {
-              const isActive = i >= navActivePage && i < navActivePage + 3
-              return (
-                <div key={i} style={{
-                  width: isActive ? 5 : 3,
-                  height: isActive ? 5 : 3,
-                  borderRadius:'50%',
-                  background: isActive ? 'var(--red)' : 'var(--border2)',
-                  transition:'all .2s ease',
-                  opacity: isActive ? 1 : 0.5,
-                }} />
-              )
-            })}
-          </div>
+        ) : (
+          /* ── Mobile : carousel swipeable 3 onglets ── */
+          <>
+            <div style={{overflow:'hidden',width:'100%',position:'relative'}}>
+              <div style={{
+                display:'flex',
+                width:`${allNavPages.length * 100 / 3}%`,
+                transform:`translateX(${navTranslateX}px)`,
+                transition: navDrag !== 0 ? 'none' : 'transform .35s cubic-bezier(.25,.46,.45,.94)',
+                willChange:'transform',
+              }}>
+                {allNavPages.map(p => (
+                  <button key={p.key}
+                    className={`nav-btn${currentPage===p.key?' active':''}`}
+                    style={{width:`${100/allNavPages.length}%`,flexShrink:0}}
+                    onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key) }}
+                    onContextMenu={e => { e.preventDefault(); setShowNavEdit(true) }}
+                    onTouchStart={e => { e.currentTarget._lt = setTimeout(() => setShowNavEdit(true), 600) }}
+                    onTouchEnd={e => clearTimeout(e.currentTarget._lt)}
+                    onTouchMove={e => clearTimeout(e.currentTarget._lt)}>
+                    <span className="icon">{p.icon}</span>{p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {allNavPages.length > 3 && (
+              <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:4,padding:'3px 0 max(6px,env(safe-area-inset-bottom))'}}>
+                {allNavPages.map((_,i) => {
+                  const isActive = i >= navActivePage && i < navActivePage + 3
+                  return (
+                    <div key={i} style={{
+                      width:isActive?5:3, height:isActive?5:3, borderRadius:'50%',
+                      background:isActive?'var(--red)':'var(--border2)',
+                      transition:'all .2s ease', opacity:isActive?1:0.5,
+                    }} />
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
       </nav>
 

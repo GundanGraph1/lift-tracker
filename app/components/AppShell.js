@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { db } from '../../lib/supabase'
 import { useStore, actions } from '../../lib/store'
 import { applyTheme, getThemeFromUser } from '../../lib/themes'
+import { LogoIcon } from './Logo'
 import Toast from './Toast'
 import EditProfile from './EditProfile'
 import SaisiePage from './pages/SaisiePage'
@@ -102,7 +103,9 @@ export default function AppShell() {
 
       {/* Header */}
       <div className="app-header">
-        <div className="header-logo">LIFT TRACKER</div>
+        <div className="header-logo" style={{display:'flex',alignItems:'center'}}>
+          <LogoIcon size={52} />
+        </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           {/* Avatar cliquable → ouvre EditProfile */}
           <div onClick={() => setShowEdit(true)} style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',padding:'4px 8px',borderRadius:10,transition:'background .15s'}}

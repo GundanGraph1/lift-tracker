@@ -5,7 +5,6 @@ import { normalize } from '../../../lib/constants'
 
 export default function LeaderboardPage() {
   const [tab, setTab] = useState('volume')
-  const [genderFilter, setGenderFilter] = useState('all') // 'all' | 'male' | 'female'
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -32,16 +31,12 @@ export default function LeaderboardPage() {
 
   function Row({user,rank,value,detail,color}) {
     const medals = ['🥇','🥈','🥉']
-    const genderIcon = user.gender === 'female' ? '👩' : user.gender === 'other' ? '🧑' : '👨'
     return (
       <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
         <div style={{width:28,textAlign:'center',fontSize:rank<3?20:14,color:rank>=3?'var(--text3)':'inherit'}}>{rank<3?medals[rank]:rank+1}</div>
         <Avatar user={user}/>
         <div style={{flex:1}}>
-          <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:4}}>
-            {user.username}
-            {genderFilter==='all'&&<span style={{fontSize:11,opacity:0.5}}>{genderIcon}</span>}
-          </div>
+          <div style={{fontWeight:700,fontSize:14}}>{user.username}</div>
           <div style={{fontSize:11,color:'var(--text3)'}}>{detail}</div>
         </div>
         <div style={{fontFamily:'var(--fm)',fontSize:20,fontWeight:700,color:color||'var(--text)'}}>{value}</div>
@@ -53,15 +48,8 @@ export default function LeaderboardPage() {
     if (!data) return []
     const { users, sessions, prs } = data
 
-    // Filtre genre
-    const filteredUsers = genderFilter === 'all'
-      ? users
-      : genderFilter === 'male'
-        ? users.filter(u => !u.gender || u.gender === 'male')
-        : users.filter(u => u.gender === 'female')
-
     if (tab==='volume') {
-      return filteredUsers.map(u=>{
+      return users.map(u=>{
         const us=sessions.filter(s=>s.user_id===u.id)
         if(!us.length) return null
         const best=us.reduce((a,s)=>s.total_volume>a.total_volume?s:a,us[0])
@@ -71,7 +59,7 @@ export default function LeaderboardPage() {
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
     if (tab==='total') {
-      return filteredUsers.map(u=>{
+      return users.map(u=>{
         const us=sessions.filter(s=>s.user_id===u.id)
         if(!us.length) return null
         const total=us.reduce((a,s)=>a+(s.total_volume||0),0)
@@ -81,7 +69,7 @@ export default function LeaderboardPage() {
     const prTab = (tab==='bench')?['bench','developpe couche']:(tab==='squat')?['squat','hack squat','leg press']:(tab==='deadlift')?['deadlift','souleve de terre','romanian']:null
     if (prTab) {
       const colors = {bench:'var(--gold)',squat:'var(--blue)',deadlift:'var(--purple)'}
-      return filteredUsers.map(u=>{
+      return users.map(u=>{
         let best=0,bestReps=0,bestDate=''
         prs.filter(p=>p.user_id===u.id).forEach(p=>{
           if(prTab.some(k=>normalize(p.exercise).includes(k))&&p.weight>best){best=p.weight;bestReps=p.reps;bestDate=p.date}
@@ -95,7 +83,7 @@ export default function LeaderboardPage() {
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
     if (tab==='sessions') {
-      return filteredUsers.map(u=>{
+      return users.map(u=>{
         const us=sessions.filter(s=>s.user_id===u.id)
         if(!us.length) return null
         const sorted=[...us].sort((a,b)=>b.session_date.localeCompare(a.session_date))
@@ -105,21 +93,8 @@ export default function LeaderboardPage() {
     return []
   }
 
-  const tabs = [
-    {k:'volume',l:'🔥 Volume'},
-    {k:'total',l:'📦 Total'},
-    {k:'bench',l:'🏋️ Bench'},
-    {k:'squat',l:'🦵 Squat'},
-    {k:'deadlift',l:'⛓️ Deadlift'},
-    {k:'sessions',l:'📅 Séances'}
-  ]
+  const tabs = [{k:'volume',l:'🔥 Volume'},{k:'total',l:'📦 Total'},{k:'bench',l:'🏋️ Bench'},{k:'squat',l:'🦵 Squat'},{k:'deadlift',l:'⛓️ Deadlift'},{k:'sessions',l:'📅 Séances'}]
   const rows = buildRows()
-
-  const genderTabs = [
-    {k:'all',   l:'🌍 Tous'},
-    {k:'male',  l:'👨 Hommes'},
-    {k:'female',l:'👩 Femmes'},
-  ]
 
   return (
     <div>
@@ -128,33 +103,11 @@ export default function LeaderboardPage() {
         <div className="page-sub">Classement général</div>
         <hr className="page-divider" />
       </div>
-
-      {/* Filtre genre */}
-      <div style={{display:'flex',gap:6,marginBottom:12}}>
-        {genderTabs.map(g=>(
-          <button key={g.k} onClick={()=>setGenderFilter(g.k)}
-            style={{flex:1,padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:12,
-              border:`1px solid ${genderFilter===g.k?'var(--red)':'var(--border)'}`,
-              background:genderFilter===g.k?'var(--red)':'var(--s1)',
-              color:genderFilter===g.k?'white':'var(--text2)',
-              transition:'all .15s'}}>
-            {g.l}
-          </button>
-        ))}
-      </div>
-
-      {/* Filtre catégorie */}
       <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
         {tabs.map(t=><button key={t.k} onClick={()=>setTab(t.k)} className={`lb-tab${tab===t.k?' active':''}`}>{t.l}</button>)}
       </div>
-
       {loading&&<div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>⏳ Chargement...</div>}
-      {!loading&&rows.length===0&&(
-        <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>
-          <div style={{fontSize:40,marginBottom:12}}>🏆</div>
-          <p>Pas encore de données{genderFilter!=='all'?' pour cette catégorie':''}</p>
-        </div>
-      )}
+      {!loading&&rows.length===0&&<div style={{textAlign:'center',padding:40,color:'var(--text3)'}}><div style={{fontSize:40,marginBottom:12}}>🏆</div><p>Pas encore de données</p></div>}
       {!loading&&rows.length>0&&(
         <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,overflow:'hidden'}}>
           {rows.map((r,i)=><Row key={r.user.id} user={r.user} rank={i} value={r.display} detail={r.detail} color={r.color}/>)}

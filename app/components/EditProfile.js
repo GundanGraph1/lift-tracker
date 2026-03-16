@@ -19,6 +19,7 @@ export default function EditProfile({ onClose }) {
   const [selectedFont, setSelectedFont] = useState(initFont)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
+  const [gender, setGender] = useState(currentUser?.gender || 'male')
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
   const previewAvatar = photo || currentUser?.avatar
@@ -58,7 +59,7 @@ export default function EditProfile({ onClose }) {
     }
 
     const themeData = JSON.stringify({ themeKey: selectedTheme, fontKey: selectedFont })
-    const updates = { username: username.trim(), avatar: avatarUrl, theme: themeData, is_private: isPrivate }
+    const updates = { username: username.trim(), avatar: avatarUrl, theme: themeData, is_private: isPrivate, gender }
     if (pin) updates.pin = pin
 
     const { error } = await db.from('users').update(updates).eq('id', currentUser.id)
@@ -134,6 +135,17 @@ export default function EditProfile({ onClose }) {
               <div>
                 <label className="field-label">Pseudo</label>
                 <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Ton pseudo" maxLength={20} />
+              </div>
+
+              {/* Genre */}
+              <div>
+                <label className="field-label">Genre</label>
+                <div style={{display:'flex',gap:8,marginTop:4}}>
+                  {[{val:'male',label:'👨 Homme'},{val:'female',label:'👩 Femme'},{val:'other',label:'🧑 Autre'}].map(g=>(
+                    <button key={g.val} onClick={()=>setGender(g.val)} style={{flex:1,padding:'8px 6px',borderRadius:10,border:`1px solid ${gender===g.val?'var(--red)':'var(--border)'}`,background:gender===g.val?'rgba(255,60,60,0.1)':'var(--s2)',color:gender===g.val?'var(--red)':'var(--text2)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>{g.label}</button>
+                  ))}
+                </div>
+                <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>Utilisé pour les paliers de badges adaptés</div>
               </div>
 
               {/* PIN */}

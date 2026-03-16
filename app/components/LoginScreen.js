@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { db } from '../../lib/supabase'
 import { actions } from '../../lib/store'
 import Toast, { showToast } from './Toast'
+import { LogoWelcome } from './Logo'
 
 export default function LoginScreen() {
   const [users, setUsers] = useState([])
@@ -16,6 +17,7 @@ export default function LoginScreen() {
   const [newPhoto, setNewPhoto] = useState(null)
   const [newPhotoFile, setNewPhotoFile] = useState(null)
   const [isPrivate, setIsPrivate] = useState(false)
+  const [newGender, setNewGender] = useState('male')
   const [creating, setCreating] = useState(false)
 
   useEffect(() => { loadUsers() }, [])
@@ -105,11 +107,11 @@ export default function LoginScreen() {
         avatarUrl = urlData.publicUrl
       }
     }
-    const { data, error } = await db.from('users').insert([{ username: newUsername.trim(), pin: newPin, avatar: avatarUrl, is_private: isPrivate }]).select().single()
+    const { data, error } = await db.from('users').insert([{ username: newUsername.trim(), pin: newPin, avatar: avatarUrl, is_private: isPrivate, gender: newGender }]).select().single()
     setCreating(false)
     if (error) { showToast('Erreur : ' + error.message, 'var(--red)'); return }
     showToast('✅ Profil créé !')
-    setScreen('profiles'); setNewUsername(''); setNewPin(''); setNewPhoto(null); setNewPhotoFile(null); setIsPrivate(false)
+    setScreen('profiles'); setNewUsername(''); setNewPin(''); setNewPhoto(null); setNewPhotoFile(null); setIsPrivate(false); setNewGender('male')
     loadUsers()
   }
 
@@ -174,6 +176,14 @@ export default function LoginScreen() {
             <label className="field-label">Code PIN (4 chiffres)</label>
             <input type="password" value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g,'').slice(0,4))} placeholder="****" inputMode="numeric" maxLength={4} />
           </div>
+          <div>
+            <label className="field-label">Genre (pour les badges et classements)</label>
+            <div style={{display:'flex',gap:8,marginTop:6}}>
+              {[{v:'male',l:'👨 Homme'},{v:'female',l:'👩 Femme'},{v:'other',l:'🧑 Autre'}].map(g=>(
+                <button key={g.v} onClick={()=>setNewGender(g.v)} style={{flex:1,padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:10,border:`1px solid ${newGender===g.v?'var(--red)':'var(--border)'}`,background:newGender===g.v?'var(--red)':'var(--s2)',color:newGender===g.v?'white':'var(--text2)',transition:'all .15s'}}>{g.l}</button>
+              ))}
+            </div>
+          </div>
           <button className="btn-primary" onClick={createProfile} disabled={creating}>
             {creating ? '⏳ Création...' : '✅ Créer le profil'}
           </button>
@@ -185,9 +195,8 @@ export default function LoginScreen() {
   return (
     <div style={{maxWidth:480,margin:'0 auto',padding:'60px 24px 24px'}}>
       <Toast />
-      <div style={{fontFamily:'var(--fm)',fontSize:48,fontWeight:900,color:'var(--red)',letterSpacing:3,lineHeight:1}}>LIFT</div>
-      <div style={{fontFamily:'var(--fm)',fontSize:48,fontWeight:900,letterSpacing:3,lineHeight:1,marginBottom:4}}>TRACKER</div>
-      <div style={{fontSize:11,color:'var(--text3)',letterSpacing:2,textTransform:'uppercase',marginBottom:32}}>Choisis ton profil</div>
+      <LogoWelcome size={160} style={{marginBottom:16, display:'block', margin:'0 auto 16px'}} />
+      <div style={{fontSize:11,color:'var(--text3)',letterSpacing:2,textTransform:'uppercase',marginBottom:32,textAlign:'center'}}>Choisis ton profil</div>
       {users.length >= 4 && (
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher..." style={{marginBottom:16}} />
       )}

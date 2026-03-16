@@ -28,7 +28,10 @@ export default function StatsPage() {
 
   async function checkBadges() {
     if (!currentUser || !sessions.length) return
+    const userGender = currentUser.gender || 'male'
     for (const badge of Object.values(BADGES)) {
+      // Ignorer les badges qui ne correspondent pas au genre
+      if (badge.gender && badge.gender !== userGender) continue
       const already = (userBadges||[]).find(b=>b.badge_key===badge.key)
       if (already) continue
       const unlocked = badge.check(sessions, userPRs||[])
@@ -213,14 +216,24 @@ export default function StatsPage() {
           <button onClick={checkBadges} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'4px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔄 Vérifier</button>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-          {Object.values(BADGES).map(b=>{
+          {Object.values(BADGES).filter(b => !b.gender || b.gender === (currentUser?.gender||'male')).map(b=>{
             const unlocked=(userBadges||[]).find(ub=>ub.badge_key===b.key)
+            const isSecret = b.secret && !unlocked
             return (
-              <div key={b.key} style={{background:unlocked?'var(--s2)':'var(--s1)',border:`1px solid ${unlocked?b.color+'88':'var(--border)'}`,borderRadius:14,padding:12,textAlign:'center',opacity:unlocked?1:0.4,transition:'all .2s'}}>
-                <div style={{fontSize:28,marginBottom:6,filter:unlocked?'none':'grayscale(1)'}}>{b.icon}</div>
-                <div style={{fontSize:11,fontWeight:700,color:unlocked?b.color:'var(--text2)'}}>{b.name}</div>
-                <div style={{fontSize:9,color:'var(--text3)',marginTop:2}}>{b.desc}</div>
-                <div style={{fontSize:9,marginTop:4,letterSpacing:1,color:unlocked?b.color:'var(--text3)'}}>{unlocked?'✓ DÉBLOQUÉ':'Verrouillé'}</div>
+              <div key={b.key} style={{background:unlocked?'var(--s2)':'var(--s1)',border:`1px solid ${unlocked?b.color+'88':isSecret?'rgba(139,92,246,0.35)':'var(--border)'}`,borderRadius:14,padding:12,textAlign:'center',opacity:unlocked?1:isSecret?0.7:0.4,transition:'all .2s',position:'relative'}}>
+                {isSecret&&<div style={{position:'absolute',top:6,right:6,fontSize:8,color:'#a78bfa',fontWeight:700,letterSpacing:0.5,background:'rgba(139,92,246,0.15)',borderRadius:4,padding:'1px 4px'}}>🔮</div>}
+                <div style={{fontSize:28,marginBottom:6,filter:unlocked?'none':isSecret?'blur(5px)':'grayscale(1)'}}>
+                  {isSecret ? '❓' : b.icon}
+                </div>
+                <div style={{fontSize:11,fontWeight:700,color:unlocked?b.color:isSecret?'#a78bfa':'var(--text2)'}}>
+                  {isSecret ? '???' : b.name}
+                </div>
+                <div style={{fontSize:9,color:'var(--text3)',marginTop:2}}>
+                  {isSecret ? 'Condition secrète' : b.desc}
+                </div>
+                <div style={{fontSize:9,marginTop:4,letterSpacing:1,color:unlocked?b.color:isSecret?'#a78bfa':'var(--text3)'}}>
+                  {unlocked?'✓ DÉBLOQUÉ':isSecret?'🔒 MYSTÈRE':'Verrouillé'}
+                </div>
               </div>
             )
           })}

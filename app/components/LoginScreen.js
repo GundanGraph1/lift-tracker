@@ -16,6 +16,7 @@ export default function LoginScreen() {
   const [newPhoto, setNewPhoto] = useState(null)
   const [newPhotoFile, setNewPhotoFile] = useState(null)
   const [isPrivate, setIsPrivate] = useState(false)
+  const [newGender, setNewGender] = useState('male')
   const [creating, setCreating] = useState(false)
 
   useEffect(() => { loadUsers() }, [])
@@ -105,11 +106,11 @@ export default function LoginScreen() {
         avatarUrl = urlData.publicUrl
       }
     }
-    const { data, error } = await db.from('users').insert([{ username: newUsername.trim(), pin: newPin, avatar: avatarUrl, is_private: isPrivate }]).select().single()
+    const { data, error } = await db.from('users').insert([{ username: newUsername.trim(), pin: newPin, avatar: avatarUrl, is_private: isPrivate, gender: newGender }]).select().single()
     setCreating(false)
     if (error) { showToast('Erreur : ' + error.message, 'var(--red)'); return }
     showToast('✅ Profil créé !')
-    setScreen('profiles'); setNewUsername(''); setNewPin(''); setNewPhoto(null); setNewPhotoFile(null); setIsPrivate(false)
+    setScreen('profiles'); setNewUsername(''); setNewPin(''); setNewPhoto(null); setNewPhotoFile(null); setIsPrivate(false); setNewGender('male')
     loadUsers()
   }
 
@@ -173,6 +174,14 @@ export default function LoginScreen() {
           <div>
             <label className="field-label">Code PIN (4 chiffres)</label>
             <input type="password" value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g,'').slice(0,4))} placeholder="****" inputMode="numeric" maxLength={4} />
+          </div>
+          <div>
+            <label className="field-label">Genre (pour les badges et classements)</label>
+            <div style={{display:'flex',gap:8,marginTop:6}}>
+              {[{v:'male',l:'👨 Homme'},{v:'female',l:'👩 Femme'},{v:'other',l:'🧑 Autre'}].map(g=>(
+                <button key={g.v} onClick={()=>setNewGender(g.v)} style={{flex:1,padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:10,border:`1px solid ${newGender===g.v?'var(--red)':'var(--border)'}`,background:newGender===g.v?'var(--red)':'var(--s2)',color:newGender===g.v?'white':'var(--text2)',transition:'all .15s'}}>{g.l}</button>
+              ))}
+            </div>
           </div>
           <button className="btn-primary" onClick={createProfile} disabled={creating}>
             {creating ? '⏳ Création...' : '✅ Créer le profil'}

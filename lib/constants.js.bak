@@ -1,5 +1,31 @@
+export const MUSCLE_LABELS = {
+  Dos: 'Dos', Pec: 'Pec', BrasBi: 'Bras Bi', BrasTri: 'Bras Tri',
+  Epaule: 'Épaule', Quad: 'Quad', Jambes: 'Jambes', FullBody: 'Full Body',
+  Ischio: 'Ischio', Fessiers: 'Fessiers', Mollets: 'Mollets', Abdos: 'Abdos'
+}
+
+export const MUSCLE_COLORS = {
+  Dos: '#3b82f6', Pec: '#ef4444', BrasBi: '#f59e0b', BrasTri: '#f97316',
+  Epaule: '#8b5cf6', Quad: '#10b981', Jambes: '#06b6d4', FullBody: '#ec4899',
+  Ischio: '#84cc16', Fessiers: '#f43f5e', Mollets: '#14b8a6', Abdos: '#6366f1'
+}
+
+export const ALL_EXERCISES = {
+  Pectoraux: ['Développé Couché (Bench Press)', 'Développé Incliné', 'Développé Décliné', 'Pec Fly Machine', 'Fly Haltères', 'Écartés Poulie', 'Pompes', 'Dips', 'Smith Incliné', 'Push-Up Lesté', 'Bench Press Prise Serrée'],
+  Dos: ['Tractions', 'Tirage Horizontal', 'Tirage Poulie Haute', 'Rowing Barre', 'Rowing Haltère', 'Tirage Vertical', 'Pull-Over', 'Soulevé de terre (Deadlift)', 'Good Morning', 'Hyper Extension', 'Traction Prise Serrée', 'Rowing Machine'],
+  Épaules: ['Développé Militaire', 'Élévation Latérale Haltères', 'Élévation Latérale Poulie', 'Oiseau / Rear Delt', 'Face Pull', 'Arnold Press', 'Élévation Frontale', 'Shrugs', 'Upright Row'],
+  Biceps: ['Curl Barre', 'Curl Haltères', 'Curl Marteau', 'Curl Pupitre Machine', 'Curl Pupitre Haltère', 'Curl Poulie Basse', 'Curl Concentré', 'Curl Incliné'],
+  Triceps: ['Barre Frontale (Skullcrusher)', 'Dips Triceps', 'Pushdown Corde', 'Pushdown Barre', 'Extension Overhead Haltère', 'Carter Extension (Triceps)', 'Kick Back', 'Extension Overhead Poulie'],
+  Quadriceps: ['Squat', 'Leg Press', 'Hack Squat Machine', 'Presse à Cuisses', 'Leg Extension', 'Fentes', 'Goblet Squat', 'Bulgarian Split Squat', 'Front Squat'],
+  'Ischio-jambiers': ['Romanian Deadlift', 'Leg Curl Couché', 'Leg Curl Assis', 'Good Morning', 'Nordic Curl', 'Sumo Deadlift'],
+  Fessiers: ['Hip Thrust', 'Kickback Poulie', 'Abducteur Machine', 'Fentes Arrière', 'Step Up'],
+  Mollets: ['Mollets Debout', 'Mollets Assis', 'Leg Press Mollets', 'Donkey Calf Raise'],
+  Abdos: ['Crunch', 'Planche', 'Crunch Poulie', 'Relevé de Jambes', 'Ab Wheel', 'Russian Twist', 'Gainage Latéral'],
+  'Full Body': ['Deadlift', 'Clean & Press', 'Thruster', 'Kettlebell Swing', 'Burpees'],
+  'Avant-bras': ['Curl Poignet', 'Extension Poignet', 'Pinch Grip', 'Farmer Walk']
+}
+
 export const BADGES = {
-  // ── BADGES NORMAUX ─────────────────────────────────────────────────────────
   volume_100k: {
     key: 'volume_100k',
     name: '100 000 kg',
@@ -105,105 +131,6 @@ export const BADGES = {
       const bench = prs.find(p => normalize(p.exercise).includes('bench') || normalize(p.exercise).includes('developpe couche'))
       return bench && bench.weight >= 100
     }
-  },
-
-  // ── BADGES MYSTÈRE 🔮 ────────────────────────────────────────────────────
-  // Condition cachée — l'icône/nom/desc ne sont visibles qu'une fois débloqués
-  mystery_early_bird: {
-    key: 'mystery_early_bird',
-    name: 'Lève-tôt',
-    desc: 'Faire une séance avant 7h du matin',
-    icon: '🌅',
-    color: '#fbbf24',
-    secret: true,
-    check: (sessions) => sessions.some(s => {
-      const t = s.created_at ? new Date(s.created_at).getHours() : -1
-      return t >= 0 && t < 7
-    })
-  },
-  mystery_night_owl: {
-    key: 'mystery_night_owl',
-    name: 'Noctambule',
-    desc: 'Faire une séance après 22h',
-    icon: '🦉',
-    color: '#818cf8',
-    secret: true,
-    check: (sessions) => sessions.some(s => {
-      const t = s.created_at ? new Date(s.created_at).getHours() : -1
-      return t >= 22
-    })
-  },
-  mystery_streak_7: {
-    key: 'mystery_streak_7',
-    name: 'Semaine parfaite',
-    desc: '7 jours consécutifs avec une séance',
-    icon: '🔥',
-    color: '#ef4444',
-    secret: true,
-    check: (sessions) => {
-      if (!sessions.length) return false
-      const dates = [...new Set(sessions.map(s => s.session_date))].sort()
-      let streak = 1, max = 1
-      for (let i = 1; i < dates.length; i++) {
-        const diff = (new Date(dates[i]) - new Date(dates[i-1])) / 86400000
-        if (diff === 1) { streak++; max = Math.max(max, streak) } else streak = 1
-      }
-      return max >= 7
-    }
-  },
-  mystery_century: {
-    key: 'mystery_century',
-    name: 'Centurion',
-    desc: '100 séances au compteur',
-    icon: '💯',
-    color: '#f59e0b',
-    secret: true,
-    check: (sessions) => sessions.length >= 100
-  },
-  mystery_volume_beast: {
-    key: 'mystery_volume_beast',
-    name: "T'ié un tigre",
-    desc: 'Plus de 20 000 kg en une seule séance',
-    icon: '🐯',
-    color: '#dc2626',
-    secret: true,
-    check: (sessions) => sessions.some(s => (s.total_volume || 0) >= 20000)
-  },
-  mystery_all_muscles: {
-    key: 'mystery_all_muscles',
-    name: 'Athlète complet',
-    desc: 'Avoir travaillé tous les groupes musculaires',
-    icon: '🏆',
-    color: '#10b981',
-    secret: true,
-    check: (sessions) => {
-      const muscles = new Set(sessions.flatMap(s => (s.muscle || '').split('+').filter(Boolean)))
-      const required = ['Pectoraux','Dos','Épaules','Biceps','Triceps','Jambes']
-      return required.every(m => muscles.has(m))
-    }
-  },
-  mystery_monday: {
-    key: 'mystery_monday',
-    name: 'International Chest Day',
-    desc: 'Faire du bench un lundi',
-    icon: '📅',
-    color: '#6366f1',
-    secret: true,
-    check: (sessions) => sessions.some(s => {
-      const day = new Date(s.session_date + 'T12:00:00').getDay()
-      return day === 1 && (s.exercises || []).some(e =>
-        normalize(e.name).includes('bench') || normalize(e.name).includes('developpe couche')
-      )
-    })
-  },
-  mystery_pr_machine: {
-    key: 'mystery_pr_machine',
-    name: 'Machine à PRs',
-    desc: 'Avoir 10 PRs enregistrés',
-    icon: '📈',
-    color: '#0ea5e9',
-    secret: true,
-    check: (sessions, prs) => (prs || []).length >= 10
   },
 }
 

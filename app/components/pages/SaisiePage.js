@@ -776,6 +776,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             </div>
           )}
         </div>
+        </div>
       )}
     </div>
   )

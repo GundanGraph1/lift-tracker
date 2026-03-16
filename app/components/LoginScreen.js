@@ -195,8 +195,8 @@ export default function LoginScreen() {
   return (
     <div style={{maxWidth:480,margin:'0 auto',padding:'60px 24px 24px'}}>
       <Toast />
-      <LogoWelcome size={160} style={{marginBottom:16}} />
-      <div style={{fontSize:11,color:'var(--text3)',letterSpacing:2,textTransform:'uppercase',marginBottom:32}}>Choisis ton profil</div>
+      <LogoWelcome size={160} style={{marginBottom:16, display:'block', margin:'0 auto 16px'}} />
+      <div style={{fontSize:11,color:'var(--text3)',letterSpacing:2,textTransform:'uppercase',marginBottom:32,textAlign:'center'}}>Choisis ton profil</div>
       {users.length >= 4 && (
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Rechercher..." style={{marginBottom:16}} />
       )}

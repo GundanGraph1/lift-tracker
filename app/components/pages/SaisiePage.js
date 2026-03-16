@@ -551,7 +551,8 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       )}
 
       {/* ─── MODE MUSCU ─── */}
-      {mode === 'muscu' && (<div>
+      {mode === 'muscu' && (
+        <>
         <label className="field-label">Groupe musculaire</label>
         <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
           {Object.keys(MUSCLE_LABELS).map(m => {
@@ -565,7 +566,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             </div>
           )}
         </div>
-      </div>
 
       <div style={{marginBottom:16}}>
         <label className="field-label">Notes (optionnel)</label>
@@ -776,8 +776,8 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               <button onClick={savePreset} style={{background:'var(--green)',border:'none',borderRadius:8,padding:'8px 14px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>Sauver</button>
             </div>
           )}
-        </div>
-      )}</div>)}
+        </>
+      )}
     </div>
   )
 }

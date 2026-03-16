@@ -148,7 +148,7 @@ export default function SantePage() {
           <div style={{marginTop:20,marginBottom:8,fontSize:11,color:'var(--text3)',letterSpacing:1,fontWeight:700}}>CARDIO — 30 DERNIERS JOURS</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
             {card('Séances', recent.length, 'sessions')}
-            {card('Durée totale', `${Math.floor(totalCardioMin/60)}h${String(totalCardioMin%60).padStart(2,'0')}`, '')}
+            {card('Durée totale', `${Math.floor(totalCardioMin / 60)}h${String(totalCardioMin % 60).padStart(2,'0')}`, '')}
             {totalCardioKm > 0 && card('Distance', `${totalCardioKm.toFixed(1)} km`, '')}
             {totalCardioKcal > 0 && card('Calories brûlées', `${totalCardioKcal}`, 'kcal estimées')}
           </div>

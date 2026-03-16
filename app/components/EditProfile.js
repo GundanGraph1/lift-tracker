@@ -196,16 +196,15 @@ export default function EditProfile({ onClose }) {
                     ))}
                   </div>
                 </div>
-                {/* ── CRITÈRE 1 : Style de vie ── */}
+                {/* ── CRITÈRE 1 : Journée type ── */}
                 <div>
-                  <label className="field-label" style={{fontSize:10}}>Style de vie quotidien</label>
+                  <label className="field-label" style={{fontSize:10}}>Journée type (hors sport)</label>
                   <div style={{display:'flex',flexDirection:'column',gap:4}}>
                     {[
-                      {v:'sedentary', l:'🪑 Sédentaire',    desc:'Assis la majorité du temps'},
-                      {v:'light',     l:'🚶 Peu actif',      desc:'Quelques déplacements, peu de marche'},
-                      {v:'moderate',  l:'🏃 Modéré',         desc:'Debout régulièrement, marche dans la journée'},
-                      {v:'active',    l:'⚡ Actif',           desc:'Toujours en mouvement, boulot physique'},
-                      {v:'very_active',l:'🔥 Très actif',    desc:'Travail physique intense toute la journée'},
+                      {v:'sedentary', l:'🪑 Bureau / étudiant',    desc:'Assis la majorité du temps'},
+                      {v:'light',     l:'🚶 Debout régulièrement', desc:'Vendeur, prof, déplacements fréquents'},
+                      {v:'active',    l:'⚡ Journée active',        desc:'Livraison, restauration, toujours en mouvement'},
+                      {v:'intense',   l:'🔥 Travail physique',      desc:'Chantier, maçon, déménagement...'},
                     ].map(a=>(
                       <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'var(--s1)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
                         <span>{a.l}</span>
@@ -220,11 +219,11 @@ export default function EditProfile({ onClose }) {
                   <label className="field-label" style={{fontSize:10}}>Pas moyens par jour</label>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {[
-                      {v:'3000', l:'< 5k',  desc:'< 5 000'},
-                      {v:'6500', l:'5-8k',  desc:'5 000 – 8 000'},
-                      {v:'10000',l:'8-12k', desc:'8 000 – 12 000'},
-                      {v:'13500',l:'12-15k',desc:'12 000 – 15 000'},
-                      {v:'17000',l:'15k+',  desc:'> 15 000'},
+                      {v:'3000', l:'< 5k',   desc:'< 5 000'},
+                      {v:'7500', l:'5-10k',  desc:'5 000 – 10 000'},
+                      {v:'12500',l:'10-15k', desc:'10 000 – 15 000'},
+                      {v:'17500',l:'15-20k', desc:'15 000 – 20 000'},
+                      {v:'22000',l:'> 20k',  desc:'> 20 000'},
                     ].map(s=>(
                       <button key={s.v} onClick={()=>setDailySteps(s.v)} style={{flex:'1 1 18%',padding:'8px 4px',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:8,border:`1px solid ${dailySteps===s.v?'var(--red)':'var(--border)'}`,background:dailySteps===s.v?'var(--red)':'var(--s3)',color:dailySteps===s.v?'white':'var(--text2)',transition:'all .15s',textAlign:'center'}}>
                         <div>{s.l}</div>
@@ -240,10 +239,10 @@ export default function EditProfile({ onClose }) {
                   <div style={{display:'flex',gap:6}}>
                     {[
                       {v:'0', l:'0'},
-                      {v:'2', l:'1-2'},
-                      {v:'4', l:'3-4'},
-                      {v:'6', l:'5-6'},
-                      {v:'7', l:'7+'},
+                      {v:'1', l:'1-2'},
+                      {v:'3', l:'3-4'},
+                      {v:'5', l:'5-6'},
+                      {v:'7', l:'6+'},
                     ].map(s=>(
                       <button key={s.v} onClick={()=>setSessionsPerWeek(s.v)} style={{flex:1,padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:8,border:`1px solid ${sessionsPerWeek===s.v?'var(--red)':'var(--border)'}`,background:sessionsPerWeek===s.v?'var(--red)':'var(--s3)',color:sessionsPerWeek===s.v?'white':'var(--text2)',transition:'all .15s'}}>
                         {s.l}

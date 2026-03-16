@@ -4,14 +4,22 @@ import { useState, useEffect, useRef } from 'react'
 import { db } from '../../../lib/supabase'
 import { showToast } from '../Toast'
 
-// Multiplicateur style de vie (NEAT de base)
+// Multiplicateur journée (NEAT hors marche et sport)
 const LIFESTYLE_MULT = {
-  sedentary: 1.15, light: 1.25, moderate: 1.35, active: 1.50, very_active: 1.65,
+  sedentary: 1.15,  // bureau, étudiant assis
+  light:     1.25,  // debout régulièrement
+  active:    1.40,  // journée debout/active
+  intense:   1.60,  // travail physique intense (chantier, déménagement...)
 }
-// Bonus séances sport (TEF + EAT)
-const SESSION_BONUS = { 0: 0, 2: 0.05, 4: 0.10, 6: 0.15, 7: 0.20 }
-// Bonus pas (NEAT marche)
-const STEPS_BONUS = { 3000: 0, 6500: 0.04, 10000: 0.09, 13500: 0.14, 17000: 0.20 }
+// Kcal brûlées par pas selon poids (formule : pas × 0.00004 × poids_kg)
+function stepsKcal(steps, weightKg) {
+  return Math.round((steps || 0) * 0.00004 * (weightKg || 75))
+}
+// Kcal brûlées par séance selon poids (intensité moyenne salle de sport)
+function sessionsKcal(sessionsPerWeek, weightKg) {
+  const kcalPerSession = Math.round(0.075 * (weightKg || 75) * 60) // ~300-500 kcal
+  return Math.round((sessionsPerWeek || 0) * kcalPerSession / 7) // ramené en kcal/jour
+}
 const GOAL_CONFIG = {
   bulk:     { label: '💪 Prise de masse', kcalDelta: +300, protein: 2.2, fat: 0.9, color: '#3b82f6', weeklyKg: +0.25 },
   cut:      { label: '🔥 Sèche',          kcalDelta: -400, protein: 2.5, fat: 0.8, color: '#ef4444', weeklyKg: -0.35 },
@@ -19,11 +27,11 @@ const GOAL_CONFIG = {
   maintain: { label: '🎯 Maintien',        kcalDelta:    0, protein: 1.8, fat: 1.0, color: '#10b981', weeklyKg:  0    },
 }
 const LIFESTYLE_LABELS = {
-  sedentary: '🪑 Sédentaire', light: '🚶 Peu actif', moderate: '🏃 Modéré',
-  active: '⚡ Actif', very_active: '🔥 Très actif',
+  sedentary: '🪑 Bureau/étudiant', light: '🚶 Debout régulier',
+  active: '⚡ Journée active', intense: '🔥 Travail physique',
 }
-const STEPS_LABELS = { 3000:'< 5 000 pas', 6500:'5-8k pas', 10000:'8-12k pas', 13500:'12-15k pas', 17000:'> 15k pas' }
-const SESSION_LABELS = { 0:'0 séance/sem', 2:'1-2/sem', 4:'3-4/sem', 6:'5-6/sem', 7:'7+/sem' }
+const STEPS_LABELS = { 3000:'< 5k pas/j', 7500:'5-10k pas/j', 12500:'10-15k pas/j', 17500:'15-20k pas/j', 22000:'> 20k pas/j' }
+const SESSION_LABELS = { 0:'0 séance/sem', 1:'1-2/sem', 3:'3-4/sem', 5:'5-6/sem', 7:'6+/sem' }
 
 function getFeedbackMsg(delta, goal, gender) {
   const f = gender === 'female'
@@ -143,13 +151,12 @@ export default function SantePage() {
   const {
     weight_kg: w, height_cm: h, birth_year: by, gender,
     goal = 'maintain',
-    activity_level = 'moderate',
+    activity_level = 'sedentary',
     daily_steps_avg,
     sessions_per_week,
   } = currentUser || {}
-  // Normaliser les valeurs aux clés connues
-  const stepsKey = [3000,6500,10000,13500,17000].reduce((best, k) => Math.abs(k-(daily_steps_avg||8000)) < Math.abs(best-(daily_steps_avg||8000)) ? k : best, 10000)
-  const sessKey  = [0,2,4,6,7].reduce((best, k) => Math.abs(k-(sessions_per_week||3)) < Math.abs(best-(sessions_per_week||3)) ? k : best, 4)
+  const stepsKey = [3000,7500,12500,17500,22000].reduce((best,k) => Math.abs(k-(daily_steps_avg||7500)) < Math.abs(best-(daily_steps_avg||7500)) ? k : best, 7500)
+  const sessKey  = [0,1,3,5,7].reduce((best,k) => Math.abs(k-(sessions_per_week||1)) < Math.abs(best-(sessions_per_week||1)) ? k : best, 1)
   const age = by ? new Date().getFullYear() - by : null
   const incomplete = !w || !h || !age
 
@@ -203,9 +210,9 @@ export default function SantePage() {
 
   let bmr = null
   if (!incomplete) bmr = gender === 'female' ? 10*w + 6.25*h - 5*age - 161 : 10*w + 6.25*h - 5*age + 5
-  // TDEE = BMR × (style de vie + bonus pas + bonus séances)
-  const totalMult = bmr ? (LIFESTYLE_MULT[activity_level] || 1.35) + (STEPS_BONUS[stepsKey] || 0) + (SESSION_BONUS[sessKey] || 0) : null
-  const tdee = bmr ? Math.round(bmr * totalMult) : null
+  // TDEE = BMR × multiplicateur_journée + kcal_pas_par_jour + kcal_séances_par_jour
+  const baseTdee = bmr ? Math.round(bmr * (LIFESTYLE_MULT[activity_level] || 1.15)) : null
+  const tdee = baseTdee ? baseTdee + stepsKcal(daily_steps_avg || 7500, w) + sessionsKcal(sessions_per_week || 1, w) : null
   const goalCfg = GOAL_CONFIG[goal]
   const targetKcal = tdee ? tdee + goalCfg.kcalDelta : null
   let proteinG = null, fatG = null, carbG = null
@@ -356,7 +363,7 @@ export default function SantePage() {
           <div style={{marginBottom:8,fontSize:11,color:'var(--text3)',letterSpacing:1,fontWeight:700}}>MÉTABOLISME</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:10}}>
             {card('Métabolisme de base', `${Math.round(bmr)} kcal`, 'Au repos complet')}
-            {card('Dépense totale (TDEE)', `${tdee} kcal`, `${LIFESTYLE_LABELS[activity_level]} · ${STEPS_LABELS[stepsKey]} · ${SESSION_LABELS[sessKey]}`)}
+            {bmr && card('Dépense totale (TDEE)', `${tdee} kcal`, `BMR ${Math.round(bmr)} + marche ${stepsKcal(daily_steps_avg||7500,w)} + NEAT ${Math.round(bmr*((LIFESTYLE_MULT[activity_level]||1.15)-1))} + sport ${sessionsKcal(sessions_per_week||1,w)} kcal`)}
           </div>
           {imc && (
             <div style={{marginTop:10,padding:'12px 16px',background:'var(--s2)',borderRadius:12,border:'1px solid var(--border)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>

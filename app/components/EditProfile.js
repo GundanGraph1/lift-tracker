@@ -201,10 +201,10 @@ export default function EditProfile({ onClose }) {
                   <label className="field-label" style={{fontSize:10}}>Journée type (hors sport)</label>
                   <div style={{display:'flex',flexDirection:'column',gap:4}}>
                     {[
-                      {v:'sedentary', l:'🪑 Bureau / étudiant',    desc:'Assis la majorité du temps'},
-                      {v:'light',     l:'🚶 Debout régulièrement', desc:'Vendeur, prof, déplacements fréquents'},
-                      {v:'active',    l:'⚡ Journée active',        desc:'Livraison, restauration, toujours en mouvement'},
-                      {v:'intense',   l:'🔥 Travail physique',      desc:'Chantier, maçon, déménagement...'},
+                      {v:'sedentary',   l:'🪑 Bureau / étudiant',    desc:'Assis la majorité du temps'},
+                      {v:'light',       l:'🚶 Debout régulièrement', desc:'Vendeur, prof, déplacements fréquents'},
+                      {v:'active',      l:'⚡ Journée active',        desc:'Livraison, restauration, toujours en mouvement'},
+                      {v:'very_active', l:'🔥 Travail physique',      desc:'Chantier, maçon, déménagement...'},
                     ].map(a=>(
                       <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'var(--s1)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
                         <span>{a.l}</span>

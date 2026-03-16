@@ -6,10 +6,11 @@ import { showToast } from '../Toast'
 
 // Multiplicateur journée (NEAT hors marche et sport)
 const LIFESTYLE_MULT = {
-  sedentary: 1.15,  // bureau, étudiant assis
-  light:     1.25,  // debout régulièrement
-  active:    1.40,  // journée debout/active
-  intense:   1.60,  // travail physique intense (chantier, déménagement...)
+  sedentary:   1.15,
+  light:       1.25,
+  moderate:    1.35,
+  active:      1.40,
+  very_active: 1.60,
 }
 // Kcal brûlées par pas selon poids (formule : pas × 0.00004 × poids_kg)
 function stepsKcal(steps, weightKg) {
@@ -28,7 +29,7 @@ const GOAL_CONFIG = {
 }
 const LIFESTYLE_LABELS = {
   sedentary: '🪑 Bureau/étudiant', light: '🚶 Debout régulier',
-  active: '⚡ Journée active', intense: '🔥 Travail physique',
+  moderate: '🏃 Modéré', active: '⚡ Journée active', very_active: '🔥 Travail physique',
 }
 const STEPS_LABELS = { 3000:'< 5k pas/j', 7500:'5-10k pas/j', 12500:'10-15k pas/j', 17500:'15-20k pas/j', 22000:'> 20k pas/j' }
 const SESSION_LABELS = { 0:'0 séance/sem', 1:'1-2/sem', 3:'3-4/sem', 5:'5-6/sem', 7:'6+/sem' }
@@ -151,7 +152,7 @@ export default function SantePage() {
   const {
     weight_kg: w, height_cm: h, birth_year: by, gender,
     goal = 'maintain',
-    activity_level = 'sedentary',
+    activity_level = 'moderate',
     daily_steps_avg,
     sessions_per_week,
   } = currentUser || {}

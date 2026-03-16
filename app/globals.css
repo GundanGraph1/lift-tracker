@@ -93,66 +93,64 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   right: 0;
   z-index: 100;
   background: var(--nav-bg, rgba(10,10,10,0.95));
-  backdrop-filter: var(--nav-blur, blur(16px));
-  -webkit-backdrop-filter: var(--nav-blur, blur(16px));
-  border-top: 1px solid var(--border2);
-  display: flex;
-  justify-content: center;
+  backdrop-filter: var(--nav-blur, blur(20px));
+  -webkit-backdrop-filter: var(--nav-blur, blur(20px));
+  border-top: 1px solid var(--border);
+  user-select: none;
 }
-.nav-bar-inner {
-  display: flex;
-  width: 100%;
-  max-width: 740px;
-  padding: 6px 4px 4px;
-  gap: 2px;
-}
+/* La barre est un slider horizontal — pas de nav-bar-inner centré */
 .nav-btn {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 6px 2px;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
   border: none;
   background: none;
   color: var(--text3);
   font-family: var(--fb);
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: .5px;
+  letter-spacing: .6px;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color .15s, transform .15s;
-  border-radius: 10px;
+  transition: color .2s;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 .nav-btn .icon {
-  font-size: 22px;
+  font-size: 24px;
   line-height: 1;
-  transition: transform .2s cubic-bezier(.34,1.56,.64,1);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), filter .2s;
+  will-change: transform;
 }
 .nav-btn.active {
   color: var(--red);
 }
 .nav-btn.active .icon {
-  transform: scale(1.2) translateY(-1px);
+  transform: scale(1.18) translateY(-2px);
 }
-.nav-btn.active::after {
+/* Indicateur — pilule sous l'icône active */
+.nav-btn.active::before {
   content: '';
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
+  width: 36px;
+  height: 2.5px;
+  border-radius: 0 0 3px 3px;
   background: var(--red);
   box-shadow: var(--accent-glow, none);
+  transition: box-shadow .3s;
 }
-
-/* Premium: glow sur icône active */
+/* Premium: glow sur icône */
 [data-premium="1"] .nav-btn.active .icon {
-  filter: drop-shadow(0 0 6px var(--red));
+  filter: drop-shadow(0 0 8px var(--red));
+}
+[data-premium="1"] .nav-btn.active::before {
+  box-shadow: 0 0 8px var(--red), 0 0 16px var(--red);
 }
 
 /* ── SYNC BAR ── */

@@ -92,10 +92,8 @@ export default function AppShell() {
   }
 
   const [showNavEdit, setShowNavEdit] = useState(false)
-  const [navPage, setNavPage] = useState(0) // page courante du carousel nav
-  const navSwipeRef = { startX: null, startY: null }
 
-  // Toutes les pages disponibles
+  // ── Toutes les pages disponibles ──
   const ALL_PAGES = [
     { key:'saisie',      icon:'✏️',  label:'Saisie' },
     { key:'historique',  icon:'📋',  label:'Historique' },
@@ -106,14 +104,14 @@ export default function AppShell() {
     { key:'leaderboard', icon:'🏆',  label:'Classement' },
   ]
 
-  // Nav order sauvegardée par user (4 onglets visibles)
-  const DEFAULT_NAV = ['saisie','historique','stats','feed']
+  // Nav order : 3 onglets principaux configurables
+  const DEFAULT_NAV = ['saisie','historique','stats']
   const getNavOrder = () => {
     try {
       const saved = localStorage.getItem(`lt_nav_${currentUser?.id}`)
       if (saved) {
         const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length >= 2) return parsed.slice(0,4)
+        if (Array.isArray(parsed) && parsed.length >= 2) return parsed.slice(0,3)
       }
     } catch {}
     return DEFAULT_NAV
@@ -121,33 +119,29 @@ export default function AppShell() {
   const [navOrder, setNavOrder] = useState(DEFAULT_NAV)
   useEffect(() => { setNavOrder(getNavOrder()) }, [currentUser?.id])
 
-  // Auto-sync groupe nav si la page active n'est pas visible
-  useEffect(() => {
-    const allNav = [...navOrder.map(k => ALL_PAGES.find(p => p.key === k)).filter(Boolean),
-                    ...ALL_PAGES.filter(p => !navOrder.includes(p.key))]
-    const idx = allNav.findIndex(p => p.key === currentPage)
-    if (idx >= 0) setNavPage(Math.floor(idx / 4))
-  }, [currentPage])
-
   const saveNavOrder = (order) => {
-    setNavOrder(order)
-    localStorage.setItem(`lt_nav_${currentUser?.id}`, JSON.stringify(order))
-    setNavPage(0)
+    setNavOrder(order.slice(0,3))
+    localStorage.setItem(`lt_nav_${currentUser?.id}`, JSON.stringify(order.slice(0,3)))
     setShowNavEdit(false)
+    setNavOffset(0)
+    setNavDrag(0)
   }
 
-  // Pages préférées (dans l'ordre choisi) + les autres à la suite
+  // Pages ordonnées : favorites d'abord, reste à la suite
   const favPages = navOrder.map(k => ALL_PAGES.find(p => p.key === k)).filter(Boolean)
   const extraPages = ALL_PAGES.filter(p => !navOrder.includes(p.key))
-  const allNavPages = [...favPages, ...extraPages]
-  // Groupes de 4 pour le carousel
-  const NAV_GROUP_SIZE = 4
-  const navGroups = []
-  for (let i = 0; i < allNavPages.length; i += NAV_GROUP_SIZE) {
-    navGroups.push(allNavPages.slice(i, i + NAV_GROUP_SIZE))
-  }
-  const currentNavGroup = navGroups[navPage] || navGroups[0] || []
-  const totalNavGroups = navGroups.length
+  const allNavPages = [...favPages, ...extraPages] // 7 pages total
+
+  // ── Swipe physique avec inertie ──
+  const [navOffset, setNavOffset] = useState(0)   // offset en px (0 = page 0)
+  const [navDrag, setNavDrag] = useState(0)        // delta en cours de drag
+  const swipe = { x0: null, y0: null, t0: null, vx: 0 }
+  const NAV_TAB_W = typeof window !== 'undefined' ? Math.floor(window.innerWidth / 3) : 120
+  const maxOffset = (allNavPages.length - 3) * NAV_TAB_W
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
+
+  const navTranslateX = clamp(-(navOffset - navDrag), -maxOffset, 0)
+  const navActivePage = Math.round(navOffset / NAV_TAB_W) // index du 1er onglet visible
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
 
@@ -200,45 +194,81 @@ export default function AppShell() {
         {currentPage==='sante' && <SantePage />}
       </div>
 
-      {/* Bottom nav — carousel swipeable */}
+      {/* Bottom nav — swipe physique avec inertie */}
       <nav className="nav-bar"
-        onTouchStart={e => { navSwipeRef.startX = e.touches[0].clientX; navSwipeRef.startY = e.touches[0].clientY }}
-        onTouchEnd={e => {
-          if (navSwipeRef.startX === null) return
-          const dx = e.changedTouches[0].clientX - navSwipeRef.startX
-          const dy = Math.abs(e.changedTouches[0].clientY - navSwipeRef.startY)
-          if (Math.abs(dx) > 40 && dy < 30) {
-            if (dx < 0 && navPage < totalNavGroups - 1) setNavPage(p => p + 1)
-            if (dx > 0 && navPage > 0) setNavPage(p => p - 1)
-          }
-          navSwipeRef.startX = null
+        onTouchStart={e => {
+          const t = e.touches[0]
+          swipe.x0 = t.clientX; swipe.y0 = t.clientY
+          swipe.t0 = Date.now(); swipe.vx = 0
+        }}
+        onTouchMove={e => {
+          if (swipe.x0 === null) return
+          const dx = e.touches[0].clientX - swipe.x0
+          const dy = Math.abs(e.touches[0].clientY - swipe.y0)
+          if (dy > Math.abs(dx) + 8) return // scroll vertical prioritaire
+          e.preventDefault()
+          const now = Date.now()
+          swipe.vx = (e.touches[0].clientX - swipe.x0) / Math.max(1, now - swipe.t0)
+          setNavDrag(dx)
+        }}
+        onTouchEnd={() => {
+          if (swipe.x0 === null) return
+          // Calcul snap avec vélocité
+          const tabW = Math.floor(window.innerWidth / 3)
+          const maxOff = (allNavPages.length - 3) * tabW
+          let target = navOffset - navDrag
+          // Inertie : si vitesse > seuil, avance d'un tab en plus
+          if (swipe.vx < -0.3) target += tabW
+          if (swipe.vx > 0.3) target -= tabW
+          // Snap au tab le plus proche
+          const snapped = Math.round(target / tabW) * tabW
+          setNavOffset(clamp(snapped, 0, maxOff))
+          setNavDrag(0)
+          swipe.x0 = null
+        }}
+        style={{touchAction:'pan-y'}}>
+        <div style={{
+          overflow:'hidden',
+          width:'100%',
+          position:'relative',
         }}>
-        <div className="nav-bar-inner">
-          {currentNavGroup.map(p => (
-            <button key={p.key}
-              className={`nav-btn${currentPage===p.key?' active':''}`}
-              onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key) }}
-              onContextMenu={e => { e.preventDefault(); setShowNavEdit(true) }}
-              onTouchStart={e => { e.currentTarget._lt = setTimeout(() => setShowNavEdit(true), 500) }}
-              onTouchEnd={e => clearTimeout(e.currentTarget._lt)}
-              onTouchMove={e => clearTimeout(e.currentTarget._lt)}>
-              <span className="icon">{p.icon}</span>{p.label}
-            </button>
-          ))}
-        </div>
-        {/* Dots pagination — visibles seulement si >1 groupe */}
-        {totalNavGroups > 1 && (
-          <div style={{display:'flex',justifyContent:'center',gap:5,paddingBottom:'max(6px,env(safe-area-inset-bottom))',paddingTop:3}}>
-            {navGroups.map((_,i) => (
-              <div key={i} onClick={() => setNavPage(i)} style={{
-                width: i===navPage ? 16 : 5,
-                height:5, borderRadius:3,
-                background: i===navPage ? 'var(--red)' : 'var(--border2)',
-                transition:'all .25s cubic-bezier(.34,1.56,.64,1)',
-                cursor:'pointer',
-                boxShadow: i===navPage ? 'var(--accent-glow,none)' : 'none',
-              }} />
+          <div style={{
+            display:'flex',
+            width: `${allNavPages.length * 100 / 3}%`,
+            transform: `translateX(${navTranslateX / allNavPages.length * 3}px)`,
+            transition: navDrag !== 0 ? 'none' : 'transform .35s cubic-bezier(.25,.46,.45,.94)',
+            willChange:'transform',
+          }}>
+            {allNavPages.map((p,i) => (
+              <button key={p.key}
+                className={`nav-btn${currentPage===p.key?' active':''}`}
+                style={{width:`${100/allNavPages.length}%`, flexShrink:0}}
+                onClick={() => { actions.setCurrentPage(p.key); localStorage.setItem('lt_page', p.key) }}
+                onContextMenu={e => { e.preventDefault(); setShowNavEdit(true) }}
+                onTouchStart={e => { e.currentTarget._lt = setTimeout(() => setShowNavEdit(true), 600) }}
+                onTouchEnd={e => clearTimeout(e.currentTarget._lt)}
+                onTouchMove={e => clearTimeout(e.currentTarget._lt)}>
+                <span className="icon">{p.icon}</span>{p.label}
+              </button>
             ))}
+          </div>
+        </div>
+        {/* Dots — discrets, 1 par page visible */}
+        {allNavPages.length > 3 && (
+          <div style={{display:'flex',justifyContent:'center',alignItems:'center',gap:4,padding:'3px 0 max(6px,env(safe-area-inset-bottom))'}}>
+            {allNavPages.map((_,i) => {
+              const isActive = i >= navActivePage && i < navActivePage + 3
+              return (
+                <div key={i} style={{
+                  width: isActive ? 5 : 3,
+                  height: isActive ? 5 : 3,
+                  borderRadius:'50%',
+                  background: isActive ? 'var(--red)' : 'var(--border2)',
+                  transition:'all .2s ease',
+                  opacity: isActive ? 1 : 0.5,
+                }} />
+              )
+            })}
           </div>
         )}
       </nav>

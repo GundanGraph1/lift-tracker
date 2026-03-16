@@ -23,6 +23,7 @@ export default function EditProfile({ onClose }) {
   const [selectedTheme, setSelectedTheme] = useState(initTheme)
   const [selectedFont, setSelectedFont] = useState(initFont)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showActivityInfo, setShowActivityInfo] = useState(false)
   const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
   const [gender, setGender] = useState(currentUser?.gender || 'male')
 
@@ -193,14 +194,17 @@ export default function EditProfile({ onClose }) {
                   </div>
                 </div>
                 <div>
-                  <label className="field-label" style={{fontSize:10}}>Niveau d'activité</label>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+                    <label className="field-label" style={{fontSize:10,marginBottom:0}}>Niveau d'activité</label>
+                    <button onClick={()=>setShowActivityInfo(true)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:'50%',width:16,height:16,fontSize:9,cursor:'pointer',color:'var(--text3)',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:0,flexShrink:0}}>i</button>
+                  </div>
                   <div style={{display:'flex',flexDirection:'column',gap:4}}>
                     {[
-                      {v:'sedentary',l:'🪑 Sédentaire',desc:"Peu ou pas d'exercice"},
-                      {v:'light',l:'🚶 Léger',desc:'1-3 séances/sem'},
-                      {v:'moderate',l:'🏃 Modéré',desc:'3-5 séances/sem'},
-                      {v:'active',l:'⚡ Actif',desc:'6-7 séances/sem'},
-                      {v:'very_active',l:'🔥 Très actif',desc:'2x/jour ou travail physique'},
+                      {v:'sedentary',l:'🪑 Sédentaire',desc:'Bureau toute la journée, peu de marche'},
+                      {v:'light',l:'🚶 Léger',desc:'1-3 séances/sem + vie peu active'},
+                      {v:'moderate',l:'🏃 Modéré',desc:'3-5 séances/sem + marche quotidienne'},
+                      {v:'active',l:'⚡ Actif',desc:'Sport quasi-quotidien ou boulot debout'},
+                      {v:'very_active',l:'🔥 Très actif',desc:'Sport intense + travail physique'},
                     ].map(a=>(
                       <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'var(--s1)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
                         <span>{a.l}</span>
@@ -210,6 +214,68 @@ export default function EditProfile({ onClose }) {
                   </div>
                 </div>
               </div>
+
+              {/* Modale info niveau d'activité */}
+              {showActivityInfo && (
+                <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:200,display:'flex',alignItems:'flex-end',justifyContent:'center'}} onClick={()=>setShowActivityInfo(false)}>
+                  <div style={{background:'var(--bg)',borderRadius:'20px 20px 0 0',padding:'20px 16px 40px',width:'100%',maxWidth:500,maxHeight:'85vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                      <div style={{fontSize:15,fontWeight:800,color:'var(--text)',fontFamily:'var(--fm)'}}>Quel est ton niveau d'activité ?</div>
+                      <button onClick={()=>setShowActivityInfo(false)} style={{background:'var(--s2)',border:'none',borderRadius:8,padding:'4px 10px',cursor:'pointer',color:'var(--text3)',fontSize:13}}>✕</button>
+                    </div>
+                    <div style={{fontSize:11,color:'var(--text3)',marginBottom:14,lineHeight:1.5}}>
+                      Ce n'est pas juste le sport — c'est toute ton activité de la journée combinée (marche, boulot, séances...).
+                    </div>
+                    {[
+                      {
+                        v:'sedentary', l:'🪑 Sédentaire', color:'#60a5fa',
+                        steps:'< 5 000 pas/jour',
+                        qui:'Boulot de bureau, voiture, peu de déplacements à pied.',
+                        sport:'0-1 séance/sem ou aucun sport.',
+                        exemple:'Développeur, comptable, chauffeur assis toute la journée.',
+                      },
+                      {
+                        v:'light', l:'🚶 Légèrement actif', color:'#34d399',
+                        steps:'5 000 – 8 000 pas/jour',
+                        qui:'Tu marches un peu mais la majorité de ta journée est sédentaire.',
+                        sport:'1-3 séances/sem, activité légère.',
+                        exemple:'Tu vas à la salle 2x/sem mais tu restes assis au bureau le reste du temps.',
+                      },
+                      {
+                        v:'moderate', l:'🏃 Modérément actif', color:'#f59e0b',
+                        steps:'8 000 – 12 000 pas/jour',
+                        qui:'Tu bouges régulièrement, tu marches souvent, tu fais du sport.',
+                        sport:'3-5 séances/sem.',
+                        exemple:'Salle 4x/sem + tu marches pour aller au taf ou tu es debout une partie de la journée.',
+                      },
+                      {
+                        v:'active', l:'⚡ Actif', color:'#f97316',
+                        steps:'12 000 – 15 000 pas/jour',
+                        qui:'Sport quasi-quotidien ou boulot physique, toujours en mouvement.',
+                        sport:'6-7 séances/sem ou boulot debout/en déplacement.',
+                        exemple:'Serveur, maçon, coach sportif, ou tu t'entraînes tous les jours.',
+                      },
+                      {
+                        v:'very_active', l:'🔥 Très actif', color:'#ef4444',
+                        steps:'> 15 000 pas/jour',
+                        qui:'Sport intense + boulot physique. Ton corps est en mouvement toute la journée.',
+                        sport:'2 séances/jour ou athlète de haut niveau.',
+                        exemple:'Maçon qui s'entraîne le soir, militaire, sportif pro.',
+                      },
+                    ].map(a => (
+                      <div key={a.v} onClick={()=>{setActivityLevel(a.v);setShowActivityInfo(false)}} style={{marginBottom:10,padding:'12px 14px',background:activityLevel===a.v?'var(--s1)':'var(--s2)',border:`1.5px solid ${activityLevel===a.v?a.color:'var(--border)'}`,borderRadius:12,cursor:'pointer',transition:'all .15s'}}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+                          <div style={{fontSize:13,fontWeight:700,color:activityLevel===a.v?a.color:'var(--text)'}}>{a.l}</div>
+                          <div style={{fontSize:11,fontWeight:700,color:a.color,background:`${a.color}18`,padding:'2px 8px',borderRadius:6}}>{a.steps}</div>
+                        </div>
+                        <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>{a.qui}</div>
+                        <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>🏋️ {a.sport}</div>
+                        <div style={{fontSize:11,color:'var(--text3)',fontStyle:'italic'}}>Ex : {a.exemple}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <button className="btn-primary" onClick={save} disabled={saving} style={{ marginTop: 4 }}>
                 {saving ? '⏳ Sauvegarde...' : '💾 Enregistrer'}

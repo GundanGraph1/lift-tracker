@@ -24,6 +24,18 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [exSearch, setExSearch] = useState('')
   const [exResults, setExResults] = useState([])
   const [saving, setSaving] = useState(false)
+  const [mode, setMode] = useState('muscu') // 'muscu' | 'cardio'
+  // Cardio states
+  const [cardioType, setCardioType] = useState('tapis')
+  const [cardioDuration, setCardioDuration] = useState('')
+  const [cardioDistance, setCardioDistance] = useState('')
+  const [cardioSpeed, setCardioSpeed] = useState('')
+  const [cardioHr, setCardioHr] = useState('')
+  const [cardioCalories, setCardioCalories] = useState('')
+  const [cardioIncline, setCardioIncline] = useState('')
+  const [cardioResistance, setCardioResistance] = useState('')
+  const [cardioNotes, setCardioNotes] = useState('')
+  const [savingCardio, setSavingCardio] = useState(false)
   const [showPresets, setShowPresets] = useState(false)
   const [presetName, setPresetName] = useState('')
   const [sharePresetId, setSharePresetId] = useState(null)
@@ -90,6 +102,44 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
   function clearDraft() {
     if (draftKey) localStorage.removeItem(draftKey)
+  }
+
+  // MET par type cardio (valeurs standard)
+  const CARDIO_MET = { tapis: 8.0, velo: 7.0, rameur: 7.5, elliptique: 5.0, corde: 10.0, autre: 6.0 }
+
+  async function saveCardio() {
+    if (!cardioDuration) { showToast('Durée obligatoire', 'var(--orange)'); return }
+    setSavingCardio(true)
+    // Calcul calories si pas renseigné (formule MET)
+    let cal = cardioCalories ? parseInt(cardioCalories) : null
+    if (!cal && currentUser?.weight_kg) {
+      const met = CARDIO_MET[cardioType] || 6
+      cal = Math.round(met * currentUser.weight_kg * (parseInt(cardioDuration) / 60))
+    }
+    // Calcul vitesse si distance+durée renseignés
+    let spd = cardioSpeed ? parseFloat(cardioSpeed) : null
+    if (!spd && cardioDistance && cardioDuration) {
+      spd = parseFloat((parseFloat(cardioDistance) / (parseInt(cardioDuration) / 60)).toFixed(1))
+    }
+    const { error } = await db.from('cardio_sessions').insert([{
+      user_id: currentUser.id,
+      session_date: date,
+      type: cardioType,
+      duration_min: parseInt(cardioDuration),
+      distance_km: cardioDistance ? parseFloat(cardioDistance) : null,
+      avg_speed_kmh: spd,
+      avg_hr: cardioHr ? parseInt(cardioHr) : null,
+      calories_burned: cal,
+      incline_pct: cardioIncline ? parseInt(cardioIncline) : null,
+      resistance: cardioResistance ? parseInt(cardioResistance) : null,
+      notes: cardioNotes || null,
+    }])
+    setSavingCardio(false)
+    if (error) { showToast('Erreur sauvegarde', 'var(--red)'); return }
+    showToast('✅ Cardio enregistré !')
+    setCardioDuration(''); setCardioDistance(''); setCardioSpeed(''); setCardioHr('')
+    setCardioCalories(''); setCardioIncline(''); setCardioResistance(''); setCardioNotes('')
+    onSaved()
   }
 
   function startRest(secs) { clearInterval(restRef.current); setRestLeft(secs); setRestTimer(secs) }
@@ -393,21 +443,115 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       <div style={{marginBottom:20}}>
         <div className="page-title">SAISIE</div>
         <div className="page-sub">Nouvelle séance</div>
-        {exercises.length > 0 && (
+        {exercises.length > 0 && mode === 'muscu' && (
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginTop:8,padding:'7px 12px',background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:10}}>
             <span style={{fontSize:12,color:'#60a5fa'}}>📝 Brouillon en cours — {exercises.length} exo{exercises.length>1?'s':''}</span>
             <button onClick={()=>{resetForm();showToast('🗑 Brouillon effacé')}} style={{background:'none',border:'none',color:'var(--text3)',fontSize:11,cursor:'pointer',fontFamily:'var(--fb)'}}>Effacer</button>
           </div>
         )}
+        {/* Toggle Muscu / Cardio */}
+        <div style={{display:'flex',gap:8,marginTop:12}}>
+          {[{v:'muscu',l:'🏋️ Muscu'},{v:'cardio',l:'🏃 Cardio'}].map(m=>(
+            <button key={m.v} onClick={()=>setMode(m.v)} style={{flex:1,padding:'10px',fontSize:13,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:10,border:`1.5px solid ${mode===m.v?'var(--red)':'var(--border)'}`,background:mode===m.v?'var(--red)':'var(--s2)',color:mode===m.v?'white':'var(--text2)',transition:'all .15s'}}>{m.l}</button>
+          ))}
+        </div>
         <hr className="page-divider" />
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+      {/* DATE / HEURE — commun aux deux modes */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
         <div><label className="field-label">Date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
         <div><label className="field-label">Heure</label><input type="time" value={time} onChange={e=>setTime(e.target.value)} /></div>
       </div>
 
-      <div style={{marginBottom:12}}>
+      {/* ─── MODE CARDIO ─── */}
+      {mode === 'cardio' && (
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          {/* Type */}
+          <div>
+            <label className="field-label">Type d'activité</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:6}}>
+              {[
+                {v:'tapis',l:'🏃 Tapis'},
+                {v:'velo',l:'🚴 Vélo'},
+                {v:'rameur',l:'🚣 Rameur'},
+                {v:'elliptique',l:'〰️ Elliptique'},
+                {v:'corde',l:'🪢 Corde'},
+                {v:'autre',l:'⚡ Autre'},
+              ].map(t=>(
+                <button key={t.v} onClick={()=>setCardioType(t.v)} style={{padding:'7px 12px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${cardioType===t.v?'var(--red)':'var(--border)'}`,background:cardioType===t.v?'var(--red)':'var(--s2)',color:cardioType===t.v?'white':'var(--text2)',transition:'all .15s'}}>{t.l}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Durée + Distance */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div>
+              <label className="field-label">Durée (min) *</label>
+              <input value={cardioDuration} onChange={e=>setCardioDuration(e.target.value)} placeholder="45" inputMode="numeric" />
+            </div>
+            {(cardioType === 'tapis' || cardioType === 'velo' || cardioType === 'rameur' || cardioType === 'autre') && (
+              <div>
+                <label className="field-label">Distance (km)</label>
+                <input value={cardioDistance} onChange={e=>setCardioDistance(e.target.value)} placeholder="5.0" inputMode="decimal" />
+              </div>
+            )}
+          </div>
+
+          {/* Vitesse + FC */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            {(cardioType === 'tapis' || cardioType === 'velo') && (
+              <div>
+                <label className="field-label">Vitesse moy. (km/h)</label>
+                <input value={cardioSpeed} onChange={e=>setCardioSpeed(e.target.value)} placeholder="10.0" inputMode="decimal" />
+              </div>
+            )}
+            <div>
+              <label className="field-label">FC moy. (bpm)</label>
+              <input value={cardioHr} onChange={e=>setCardioHr(e.target.value)} placeholder="145" inputMode="numeric" />
+            </div>
+          </div>
+
+          {/* Incline / Résistance */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            {cardioType === 'tapis' && (
+              <div>
+                <label className="field-label">Inclinaison (%)</label>
+                <input value={cardioIncline} onChange={e=>setCardioIncline(e.target.value)} placeholder="2" inputMode="numeric" />
+              </div>
+            )}
+            {(cardioType === 'velo' || cardioType === 'elliptique') && (
+              <div>
+                <label className="field-label">Résistance</label>
+                <input value={cardioResistance} onChange={e=>setCardioResistance(e.target.value)} placeholder="8" inputMode="numeric" />
+              </div>
+            )}
+            <div>
+              <label className="field-label">Calories (optionnel)</label>
+              <input value={cardioCalories} onChange={e=>setCardioCalories(e.target.value)} placeholder="auto" inputMode="numeric" />
+            </div>
+          </div>
+
+          {/* Estimation calories */}
+          {cardioDuration && !cardioCalories && currentUser?.weight_kg && (
+            <div style={{padding:'8px 12px',background:'rgba(16,185,129,0.08)',border:'1px solid rgba(16,185,129,0.2)',borderRadius:8,fontSize:12,color:'#10b981'}}>
+              🔥 Estimation : ~{Math.round(({tapis:8,velo:7,rameur:7.5,elliptique:5,corde:10,autre:6}[cardioType]||6) * currentUser.weight_kg * (parseInt(cardioDuration||0)/60))} kcal
+            </div>
+          )}
+
+          <div>
+            <label className="field-label">Notes</label>
+            <input value={cardioNotes} onChange={e=>setCardioNotes(e.target.value)} placeholder="Interval training, zone 2..." />
+          </div>
+
+          <button onClick={saveCardio} disabled={savingCardio} style={{background:'var(--red)',border:'none',borderRadius:12,padding:'14px',color:'white',fontSize:15,fontFamily:'var(--fm)',fontWeight:800,letterSpacing:1,cursor:'pointer',width:'100%'}}>
+            {savingCardio ? '⏳ Enregistrement...' : '✅ ENREGISTRER LE CARDIO'}
+          </button>
+        </div>
+      )}
+
+      {/* ─── MODE MUSCU ─── */}
+      {mode === 'muscu' && (<div>
         <label className="field-label">Groupe musculaire</label>
         <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
           {Object.keys(MUSCLE_LABELS).map(m => {
@@ -633,7 +777,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             </div>
           )}
         </div>
-      )}
+      )}</div>)}
     </div>
   )
 }

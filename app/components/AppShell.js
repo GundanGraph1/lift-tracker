@@ -12,6 +12,7 @@ import StatsPage from './pages/StatsPage'
 import FeedPage from './pages/FeedPage'
 import CalendrierPage from './pages/CalendrierPage'
 import LeaderboardPage from './pages/LeaderboardPage'
+import SantePage from './pages/SantePage'
 
 export default function AppShell() {
   const currentUser = useStore(s => s.currentUser)
@@ -36,12 +37,13 @@ export default function AppShell() {
     if (!currentUser) return
     try {
       setSyncStatus('syncing'); setSyncMsg('Synchronisation...')
-      const [sessRes, exRes, presRes, prRes, badgeRes] = await Promise.all([
+      const [sessRes, exRes, presRes, prRes, badgeRes, cardioRes] = await Promise.all([
         db.from('sessions').select('*').eq('user_id', currentUser.id).order('session_date', { ascending: false }),
         db.from('custom_exercises').select('*').eq('user_id', currentUser.id),
         db.from('presets').select('*').eq('user_id', currentUser.id),
         db.from('prs').select('*').eq('user_id', currentUser.id),
         db.from('badges').select('*').eq('user_id', currentUser.id),
+        db.from('cardio_sessions').select('*').eq('user_id', currentUser.id).order('session_date', { ascending: false }),
       ])
       const sessions = (sessRes.data||[]).map(s=>({...s, exercises: typeof s.exercises==='string' ? JSON.parse(s.exercises) : (s.exercises||[])}))
       actions.setSessions(sessions)
@@ -49,6 +51,7 @@ export default function AppShell() {
       actions.setPresets((presRes.data||[]).map(p=>({...p, exercises: typeof p.exercises==='string' ? JSON.parse(p.exercises) : (p.exercises||[])})))
       actions.setUserPRs(prRes.data||[])
       actions.setUserBadges(badgeRes.data||[])
+      actions.setCardioSessions(cardioRes.data||[])
       const pending = getOfflineSessions().length
       setSyncStatus('ok')
       setSyncMsg(`✓ Synchronisé — ${sessions.length} séances${pending > 0 ? ` · ${pending} en attente` : ''}`)
@@ -93,6 +96,7 @@ export default function AppShell() {
     { key:'feed', icon:'👥', label:'Feed' },
     { key:'calendrier', icon:'📅', label:'Calendrier' },
     { key:'leaderboard', icon:'🏆', label:'Top' },
+    { key:'sante', icon:'❤️', label:'Santé' },
   ]
 
   const isImg = currentUser?.avatar?.startsWith('http') || currentUser?.avatar?.startsWith('data:')
@@ -143,6 +147,7 @@ export default function AppShell() {
         {currentPage==='feed' && <FeedPage />}
         {currentPage==='calendrier' && <CalendrierPage />}
         {currentPage==='leaderboard' && <LeaderboardPage />}
+        {currentPage==='sante' && <SantePage />}
       </div>
 
       {/* Bottom nav */}

@@ -10,6 +10,11 @@ export default function EditProfile({ onClose }) {
   const { themeKey: initTheme, fontKey: initFont } = getThemeFromUser(currentUser)
 
   const [tab, setTab] = useState('profil') // 'profil' | 'theme'
+  const [weightKg, setWeightKg] = useState(currentUser?.weight_kg?.toString() || '')
+  const [heightCm, setHeightCm] = useState(currentUser?.height_cm?.toString() || '')
+  const [birthYear, setBirthYear] = useState(currentUser?.birth_year?.toString() || '')
+  const [goal, setGoal] = useState(currentUser?.goal || 'maintain')
+  const [activityLevel, setActivityLevel] = useState(currentUser?.activity_level || 'moderate')
   const [username, setUsername] = useState(currentUser?.username || '')
   const [pin, setPin] = useState('')
   const [photo, setPhoto] = useState(null)
@@ -59,7 +64,12 @@ export default function EditProfile({ onClose }) {
     }
 
     const themeData = JSON.stringify({ themeKey: selectedTheme, fontKey: selectedFont })
-    const updates = { username: username.trim(), avatar: avatarUrl, theme: themeData, is_private: isPrivate, gender }
+    const updates = { username: username.trim(), avatar: avatarUrl, theme: themeData, is_private: isPrivate, gender,
+      weight_kg: weightKg ? parseFloat(weightKg) : null,
+      height_cm: heightCm ? parseInt(heightCm) : null,
+      birth_year: birthYear ? parseInt(birthYear) : null,
+      goal, activity_level: activityLevel
+    }
     if (pin) updates.pin = pin
 
     const { error } = await db.from('users').update(updates).eq('id', currentUser.id)
@@ -155,6 +165,50 @@ export default function EditProfile({ onClose }) {
                   type="password" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,4))}
                   placeholder="4 chiffres" inputMode="numeric" maxLength={4}
                 />
+              </div>
+
+              {/* Profil physique */}
+              <div style={{padding:'14px',background:'var(--s2)',borderRadius:12,border:'1px solid var(--border)',display:'flex',flexDirection:'column',gap:12}}>
+                <div style={{fontSize:12,color:'var(--text2)',fontWeight:700,letterSpacing:1}}>📏 PROFIL PHYSIQUE</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+                  <div>
+                    <label className="field-label" style={{fontSize:10}}>Poids (kg)</label>
+                    <input value={weightKg} onChange={e=>setWeightKg(e.target.value)} placeholder="75" inputMode="decimal" style={{textAlign:'center'}}/>
+                  </div>
+                  <div>
+                    <label className="field-label" style={{fontSize:10}}>Taille (cm)</label>
+                    <input value={heightCm} onChange={e=>setHeightCm(e.target.value)} placeholder="175" inputMode="numeric" style={{textAlign:'center'}}/>
+                  </div>
+                  <div>
+                    <label className="field-label" style={{fontSize:10}}>Année naiss.</label>
+                    <input value={birthYear} onChange={e=>setBirthYear(e.target.value)} placeholder="1998" inputMode="numeric" maxLength={4} style={{textAlign:'center'}}/>
+                  </div>
+                </div>
+                <div>
+                  <label className="field-label" style={{fontSize:10}}>Objectif</label>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {[{v:'bulk',l:'💪 Prise de masse'},{v:'cut',l:'🔥 Sèche'},{v:'recomp',l:'⚖️ Recompo'},{v:'maintain',l:'🎯 Maintien'}].map(g=>(
+                      <button key={g.v} onClick={()=>setGoal(g.v)} style={{flex:'1 1 40%',padding:'6px 4px',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${goal===g.v?'var(--red)':'var(--border)'}`,background:goal===g.v?'var(--red)':'var(--s3)',color:goal===g.v?'white':'var(--text2)',transition:'all .15s'}}>{g.l}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="field-label" style={{fontSize:10}}>Niveau d'activité</label>
+                  <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                    {[
+                      {v:'sedentary',l:'🪑 Sédentaire','d':'Peu ou pas d\'exercice'},
+                      {v:'light',l:'🚶 Léger','d':'1-3 séances/sem'},
+                      {v:'moderate',l:'🏃 Modéré','d':'3-5 séances/sem'},
+                      {v:'active',l:'⚡ Actif','d':'6-7 séances/sem'},
+                      {v:'very_active',l:'🔥 Très actif','d':'2x/jour ou travail physique'},
+                    ].map(a=>(
+                      <button key={a.v} onClick={()=>setActivityLevel(a.v)} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 10px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${activityLevel===a.v?'var(--red)':'var(--border)'}`,background:activityLevel===a.v?'rgba(var(--red-rgb,255,60,60),0.08)':'var(--s3)',color:activityLevel===a.v?'var(--red)':'var(--text2)',transition:'all .15s',textAlign:'left'}}>
+                        <span>{a.l}</span>
+                        <span style={{fontSize:10,opacity:0.6,fontWeight:400}}>{a.d}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <button className="btn-primary" onClick={save} disabled={saving} style={{ marginTop: 4 }}>

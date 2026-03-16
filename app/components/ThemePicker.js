@@ -71,7 +71,7 @@ export default function ThemePicker({ onClose }) {
 
         {/* Color section — Standard */}
         <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 12 }}>Couleur d'accent</div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 12 }}>Couleur d&apos;accent</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
             {THEMES.filter(t => !t.premium).map(t => (
               <div key={t.key} onClick={() => selectTheme(t.key)} style={{

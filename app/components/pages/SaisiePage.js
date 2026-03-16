@@ -633,7 +633,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           <div style={{marginTop:10,padding:'14px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12,display:'flex',flexDirection:'column',gap:12}}>
             {/* Type */}
             <div>
-              <label className="field-label">Type d'activité</label>
+              <label className="field-label">Type d&apos;activité</label>
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
                 {[{v:'tapis',l:'🏃 Tapis'},{v:'velo',l:'🚴 Vélo'},{v:'rameur',l:'🚣 Rameur'},{v:'elliptique',l:'〰️ Elliptique'},{v:'corde',l:'🪢 Corde'},{v:'autre',l:'⚡ Autre'}].map(t=>(
                   <button key={t.v} onClick={()=>setCardioType(t.v)} style={{padding:'6px 11px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:8,border:`1px solid ${cardioType===t.v?'var(--orange)':'var(--border)'}`,background:cardioType===t.v?'rgba(249,115,22,0.15)':'var(--s3)',color:cardioType===t.v?'var(--orange)':'var(--text2)',transition:'all .15s'}}>{t.l}</button>
@@ -805,7 +805,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           {/* Import preset */}
           <div style={{marginTop:10,borderTop:'1px solid var(--border)',paddingTop:10}}>
             {!showImport
-              ? <button onClick={()=>setShowImport(true)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',padding:0}}>📥 Importer le preset d'un ami</button>
+              ? <button onClick={()=>setShowImport(true)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',padding:0}}>📥 Importer le preset d&apos;un ami</button>
               : <div style={{display:'flex',gap:6}}>
                   <input value={importCode} onChange={e=>setImportCode(e.target.value)} placeholder="Colle le code ici..." style={{flex:1,fontSize:11,padding:'7px 10px',fontFamily:'monospace'}}/>
                   <button onClick={importPreset} disabled={importLoading} style={{background:'var(--blue)',border:'none',borderRadius:8,padding:'7px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>{importLoading?'⏳':'📥'}</button>

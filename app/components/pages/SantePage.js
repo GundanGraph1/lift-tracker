@@ -336,7 +336,7 @@ export default function SantePage() {
       <div style={{padding:'12px 14px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12,marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',gap:10}}>
         <div>
           <div style={{fontSize:12,fontWeight:700,color:'var(--text2)'}}>🔔 Rappel de pesée</div>
-          <div style={{fontSize:10,color:'var(--text3)',marginTop:2}}>Alerte dans l'app après X jours sans peser</div>
+          <div style={{fontSize:10,color:'var(--text3)',marginTop:2}}>Alerte dans l&apos;app après X jours sans peser</div>
         </div>
         <div style={{display:'flex',gap:6}}>
           {[7,14].map(d => (

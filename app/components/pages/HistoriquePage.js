@@ -29,6 +29,19 @@ export default function HistoriquePage({ onChanged }) {
     setEditSession({...s, exercises: (s.exercises||[]).map(e=>({...e,sets:e.sets.map(st=>({...st}))}))})
   }
 
+  function toggleEditUnilateral(ei) {
+    setEditSession(prev => {
+      const exos = [...prev.exercises]
+      const ex = {...exos[ei]}
+      ex.unilateral = !ex.unilateral
+      if (ex.unilateral) {
+        ex.sets = ex.sets.map(st => ({...st, wL:st.w||'', wR:st.w||'', rL:st.r||'', rR:st.r||''}))
+      }
+      exos[ei] = ex
+      return {...prev, exercises: exos}
+    })
+  }
+
   function updateEditSet(ei, si, field, val) {
     setEditSession(prev => {
       const exos = [...prev.exercises]
@@ -40,7 +53,10 @@ export default function HistoriquePage({ onChanged }) {
   async function saveEdit() {
     if (!editSession) return
     setSaving(true)
-    const totalVolume = editSession.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0),0)
+    const totalVolume = editSession.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>{
+      if (e.unilateral) return b+(parseFloat(st.rL)||0)*(parseFloat(st.wL)||0)+(parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
+      return b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0)
+    },0),0)
     const { error } = await db.from('sessions').update({
       session_date: editSession.session_date,
       session_time: editSession.session_time||'',
@@ -138,14 +154,41 @@ export default function HistoriquePage({ onChanged }) {
               <div><label className="field-label">Notes</label><textarea value={editSession.notes||''} onChange={e=>setEditSession(p=>({...p,notes:e.target.value}))} rows={2} style={{resize:'none'}}/></div>
               {editSession.exercises.map((ex,ei)=>(
                 <div key={ei} style={{background:'var(--s2)',borderRadius:12,padding:12,border:'1px solid var(--border)'}}>
-                  <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>{ex.name}</div>
-                  {ex.sets.map((st,si)=>(
-                    <div key={si} style={{display:'grid',gridTemplateColumns:'30px 1fr 1fr',gap:6,marginBottom:4,alignItems:'center'}}>
-                      <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
-                      <input type="number" value={st.r} onChange={e=>updateEditSet(ei,si,'r',e.target.value)} placeholder="Reps" style={{padding:'6px',fontSize:13}}/>
-                      <input type="number" value={st.w} onChange={e=>updateEditSet(ei,si,'w',e.target.value)} placeholder="kg" step="0.5" style={{padding:'6px',fontSize:13}}/>
-                    </div>
-                  ))}
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <div style={{fontSize:13,fontWeight:600}}>{ex.name}</div>
+                    <button onClick={()=>toggleEditUnilateral(ei)} style={{background:ex.unilateral?'rgba(251,146,60,.15)':'none',border:ex.unilateral?'1px solid var(--orange)':'1px solid var(--border)',borderRadius:6,padding:'3px 8px',color:ex.unilateral?'var(--orange)':'var(--text3)',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'var(--fb)'}}>1️⃣ {ex.unilateral?'Uni ON':'Uni'}</button>
+                  </div>
+                  {ex.unilateral ? (
+                    <>
+                      <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr',gap:4,marginBottom:4}}>
+                        <span/><span style={{fontSize:9,color:'var(--orange)',textAlign:'center',fontWeight:700}}>Reps G</span><span style={{fontSize:9,color:'var(--orange)',textAlign:'center',fontWeight:700}}>kg G</span><span style={{fontSize:9,color:'var(--blue)',textAlign:'center',fontWeight:700}}>Reps D</span><span style={{fontSize:9,color:'var(--blue)',textAlign:'center',fontWeight:700}}>kg D</span>
+                      </div>
+                      {ex.sets.map((st,si)=>(
+                        <div key={si} style={{marginBottom:6}}>
+                          <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr',gap:4,alignItems:'center'}}>
+                            <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
+                            <input type="number" value={st.rL||''} onChange={e=>updateEditSet(ei,si,'rL',e.target.value)} placeholder="0" style={{padding:'5px 2px',fontSize:12,textAlign:'center',borderColor:'var(--orange)'}}/>
+                            <input type="number" value={st.wL||''} onChange={e=>updateEditSet(ei,si,'wL',e.target.value)} placeholder="0" step="0.5" style={{padding:'5px 2px',fontSize:12,textAlign:'center',borderColor:'var(--orange)'}}/>
+                            <input type="number" value={st.rR||''} onChange={e=>updateEditSet(ei,si,'rR',e.target.value)} placeholder="0" style={{padding:'5px 2px',fontSize:12,textAlign:'center',borderColor:'var(--blue)'}}/>
+                            <input type="number" value={st.wR||''} onChange={e=>updateEditSet(ei,si,'wR',e.target.value)} placeholder="0" step="0.5" style={{padding:'5px 2px',fontSize:12,textAlign:'center',borderColor:'var(--blue)'}}/>
+                          </div>
+                          {(parseFloat(st.rL)||0)!==(parseFloat(st.rR)||0) && (st.rL||st.rR) && (
+                            <div style={{fontSize:10,color:'var(--orange)',textAlign:'center',marginTop:2}}>
+                              ⚠️ {(parseFloat(st.rL)||0)>(parseFloat(st.rR)||0)?`G +${(parseFloat(st.rL)||0)-(parseFloat(st.rR)||0)} rep`:`D +${(parseFloat(st.rR)||0)-(parseFloat(st.rL)||0)} rep`}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    ex.sets.map((st,si)=>(
+                      <div key={si} style={{display:'grid',gridTemplateColumns:'30px 1fr 1fr',gap:6,marginBottom:4,alignItems:'center'}}>
+                        <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
+                        <input type="number" value={st.r} onChange={e=>updateEditSet(ei,si,'r',e.target.value)} placeholder="Reps" style={{padding:'6px',fontSize:13}}/>
+                        <input type="number" value={st.w} onChange={e=>updateEditSet(ei,si,'w',e.target.value)} placeholder="kg" step="0.5" style={{padding:'6px',fontSize:13}}/>
+                      </div>
+                    ))
+                  )}
                 </div>
               ))}
               <button className="btn-primary" onClick={saveEdit} disabled={saving}>{saving?'⏳ Sauvegarde...':'💾 Sauvegarder'}</button>

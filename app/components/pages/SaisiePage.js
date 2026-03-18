@@ -214,6 +214,14 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     showToast('🗑 Preset supprimé')
   }
 
+  function toggleUnilateral(exId) {
+    setExercises(prev => prev.map(ex => ex.id!==exId ? ex : {
+      ...ex,
+      unilateral: !ex.unilateral,
+      sets: ex.sets.map(st => ({...st, wL: st.w||'', wR: st.w||'', rL: st.r||'', rR: st.r||''}))
+    }))
+  }
+
   function updateSet(exId, setId, field, val) {
     setExercises(prev => prev.map(ex => ex.id!==exId ? ex : {...ex, sets: ex.sets.map(st => st.id!==setId ? st : {...st,[field]:val})}))
   }
@@ -228,20 +236,35 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
   function removeExercise(exId) { setExercises(prev => prev.filter(ex => ex.id!==exId)) }
 
-  const totalVolume = exercises.reduce((a,ex) => isBW(ex.name) ? a : a+ex.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0),0)
+  const totalVolume = exercises.reduce((a,ex) => isBW(ex.name) ? a : a+ex.sets.reduce((b,st) => {
+    if (ex.unilateral) return b + (parseFloat(st.rL)||0)*(parseFloat(st.wL)||0) + (parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
+    return b + (parseFloat(st.r)||0)*(parseFloat(st.w)||0)
+  }, 0), 0)
 
   async function checkAndUpdatePRs(exos, sessionDate) {
     for (const ex of exos) {
-      const validSets = ex.sets.filter(st => (parseInt(st.r)||0)<=2 && (parseFloat(st.w)||0)>0)
-      if (!validSets.length) continue
-      const maxSet = validSets.reduce((best,st) => (parseFloat(st.w)||0)>(parseFloat(best.w)||0)?st:best, validSets[0])
+      let maxW = 0, maxR = 0
+      if (ex.unilateral) {
+        // PR basé sur le meilleur côté (poids max en 1-2 reps)
+        ex.sets.forEach(st => {
+          if ((parseInt(st.rL)||0)<=2 && (parseFloat(st.wL)||0)>maxW) { maxW=parseFloat(st.wL)||0; maxR=parseInt(st.rL)||0 }
+          if ((parseInt(st.rR)||0)<=2 && (parseFloat(st.wR)||0)>maxW) { maxW=parseFloat(st.wR)||0; maxR=parseInt(st.rR)||0 }
+        })
+      } else {
+        const validSets = ex.sets.filter(st => (parseInt(st.r)||0)<=2 && (parseFloat(st.w)||0)>0)
+        if (!validSets.length) continue
+        const maxSet = validSets.reduce((best,st) => (parseFloat(st.w)||0)>(parseFloat(best.w)||0)?st:best, validSets[0])
+        maxW = parseFloat(maxSet.w)||0; maxR = parseInt(maxSet.r)||0
+      }
+      if (!maxW) continue
       const existing = (userPRs||[]).find(p => normalize(p.exercise)===normalize(ex.name))
+      const label = ex.unilateral ? `${ex.name} (par côté)` : ex.name
       if (!existing) {
-        await db.from('prs').insert([{user_id:currentUser.id,exercise:ex.name,weight:maxSet.w,reps:maxSet.r,date:sessionDate,is_manual:false}])
-        showToast(`🏆 Nouveau PR ${ex.name} : ${maxSet.w}kg !`, 'var(--gold)')
-      } else if (parseFloat(maxSet.w)>parseFloat(existing.weight)) {
-        await db.from('prs').update({weight:maxSet.w,reps:maxSet.r,date:sessionDate,is_manual:false}).eq('id',existing.id)
-        showToast(`🏆 Nouveau PR ${ex.name} : ${maxSet.w}kg !`, 'var(--gold)')
+        await db.from('prs').insert([{user_id:currentUser.id,exercise:ex.name,weight:maxW,reps:maxR,date:sessionDate,is_manual:false}])
+        showToast(`🏆 Nouveau PR ${label} : ${maxW}kg !`, 'var(--gold)')
+      } else if (maxW > parseFloat(existing.weight)) {
+        await db.from('prs').update({weight:maxW,reps:maxR,date:sessionDate,is_manual:false}).eq('id',existing.id)
+        showToast(`🏆 Nouveau PR ${label} : ${maxW}kg !`, 'var(--gold)')
       }
     }
   }
@@ -532,6 +555,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
               <div style={{width:26,height:26,borderRadius:8,background:'var(--red)',color:'white',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{exercises.indexOf(ex)+1}</div>
               <div style={{flex:1,fontSize:14,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>{ex.name}{isBW(ex.name)&&<span style={{fontSize:10,fontWeight:700,background:'rgba(59,130,246,.2)',color:'var(--blue)',borderRadius:4,padding:'2px 6px',letterSpacing:1,flexShrink:0}}>BW</span>}</div>
+              <button onClick={()=>toggleUnilateral(ex.id)} title="Mode unilatéral" style={{background:ex.unilateral?'rgba(251,146,60,.15)':'none',border:ex.unilateral?'1px solid var(--orange)':'1px solid transparent',borderRadius:6,padding:'3px 7px',color:ex.unilateral?'var(--orange)':'var(--text3)',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'var(--fb)',transition:'all .15s',flexShrink:0}}>1️⃣</button>
               <button onClick={()=>removeExercise(ex.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
             </div>
             {last && (
@@ -541,17 +565,47 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               </div>
             )}
             <div style={{padding:'10px 14px'}}>
-              <div style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:6}}>
-                <span/><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Reps</span><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Poids (kg)</span><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Vol</span><span/>
-              </div>
-              {ex.sets.map((st,si)=>(
-                <div key={st.id} style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:6,alignItems:'center'}}>
-                  <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
-                  <input type="number" value={st.r} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'8px 4px',fontSize:14}}/>
-                  <input type="number" value={st.w} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)} placeholder={isBW(ex.name)?"Lest":"0"} min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'8px 4px',fontSize:14,borderColor:isBW(ex.name)&&!st.w?'var(--blue)':''}}/>
-                  <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
-                  <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
+              {ex.unilateral ? (
+                <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr 28px',gap:4,marginBottom:6}}>
+                  <span/><span style={{fontSize:10,color:'var(--orange)',textAlign:'center',fontWeight:700}}>Reps G</span><span style={{fontSize:10,color:'var(--orange)',textAlign:'center',fontWeight:700}}>kg G</span><span style={{fontSize:10,color:'var(--blue)',textAlign:'center',fontWeight:700}}>Reps D</span><span style={{fontSize:10,color:'var(--blue)',textAlign:'center',fontWeight:700}}>kg D</span><span/>
                 </div>
+              ) : (
+                <div style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:6}}>
+                  <span/><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Reps</span><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Poids (kg)</span><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Vol</span><span/>
+                </div>
+              )}
+              {ex.sets.map((st,si)=>(
+                ex.unilateral ? (
+                  <div key={st.id} style={{marginBottom:8}}>
+                    <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr 28px',gap:4,alignItems:'center'}}>
+                      <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
+                      <input type="number" value={st.rL||''} onChange={e=>updateSet(ex.id,st.id,'rL',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'6px 2px',fontSize:13,borderColor:'var(--orange)',borderWidth:1}}/>
+                      <input type="number" value={st.wL||''} onChange={e=>updateSet(ex.id,st.id,'wL',e.target.value)} placeholder="0" min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'6px 2px',fontSize:13,borderColor:'var(--orange)',borderWidth:1}}/>
+                      <input type="number" value={st.rR||''} onChange={e=>updateSet(ex.id,st.id,'rR',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'6px 2px',fontSize:13,borderColor:'var(--blue)',borderWidth:1}}/>
+                      <input type="number" value={st.wR||''} onChange={e=>updateSet(ex.id,st.id,'wR',e.target.value)} placeholder="0" min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'6px 2px',fontSize:13,borderColor:'var(--blue)',borderWidth:1}}/>
+                      <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
+                    </div>
+                    {/* Indicateur déséquilibre */}
+                    {(st.rL||st.rR||st.wL||st.wR) && (parseFloat(st.rL)||0)!==(parseFloat(st.rR)||0) && (
+                      <div style={{fontSize:10,color:'var(--orange)',textAlign:'center',marginTop:2}}>
+                        ⚠️ {(parseFloat(st.rL)||0)>(parseFloat(st.rR)||0)?`G +${(parseFloat(st.rL)||0)-(parseFloat(st.rR)||0)} rep`:`D +${(parseFloat(st.rR)||0)-(parseFloat(st.rL)||0)} rep`}
+                      </div>
+                    )}
+                    {(st.wL||st.wR) && (parseFloat(st.wL)||0)!==(parseFloat(st.wR)||0) && (
+                      <div style={{fontSize:10,color:'var(--text3)',textAlign:'center'}}>
+                        {(parseFloat(st.wL)||0)>(parseFloat(st.wR)||0)?`G +${((parseFloat(st.wL)||0)-(parseFloat(st.wR)||0)).toFixed(1)}kg`:`D +${((parseFloat(st.wR)||0)-(parseFloat(st.wL)||0)).toFixed(1)}kg`}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div key={st.id} style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:6,alignItems:'center'}}>
+                    <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
+                    <input type="number" value={st.r} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'8px 4px',fontSize:14}}/>
+                    <input type="number" value={st.w} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)} placeholder={isBW(ex.name)?"Lest":"0"} min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'8px 4px',fontSize:14,borderColor:isBW(ex.name)&&!st.w?'var(--blue)':''}}/>
+                    <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
+                    <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
+                  </div>
+                )
               ))}
               <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
                 <button onClick={()=>addSet(ex.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 14px',color:'var(--text2)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)'}}>＋ Série</button>

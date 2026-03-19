@@ -567,7 +567,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               {/* Ligne mode unilatéral */}
               <div onClick={()=>toggleUnilateral(ex.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:6,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
                 <div>
-                  <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>💪 Mode unilatéral</span>
+                  <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>Mode unilatéral</span>
                   <span style={{fontSize:10,color:'var(--text3)',marginLeft:6}}>Poids et reps par côté (G / D)</span>
                 </div>
                 <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>

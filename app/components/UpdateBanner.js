@@ -55,10 +55,10 @@ export default function UpdateBanner() {
           fontSize: 10, fontWeight: 800, fontFamily: 'var(--fb)',
           letterSpacing: 1.5, padding: '4px 10px', borderRadius: 20,
           marginBottom: 14
-        }}>🆕 MISE À JOUR</div>
+        }}>MISE À JOUR</div>
 
         <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--fm)', color: 'var(--text)', marginBottom: 8, lineHeight: 1.2 }}>
-          Cardio &amp; Suivi<br />nutritionnel 💪🏃
+          Cardio &amp; Suivi<br />nutritionnel
         </div>
 
         <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
@@ -67,10 +67,10 @@ export default function UpdateBanner() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
           {[
-            { icon: '⚖️', text: 'Ton poids & ta taille', sub: 'Pour calculer ton IMC et tes calories' },
-            { icon: '🎂', text: 'Ton année de naissance', sub: 'Pour le métabolisme de base (BMR)' },
-            { icon: '🎯', text: 'Ton objectif', sub: 'Prise de masse, sèche, maintien...' },
-            { icon: '🏃', text: 'Cardio dans la saisie', sub: 'Tapis, vélo, rameur — calories auto' },
+            { icon: '', text: 'Ton poids & ta taille', sub: 'Pour calculer ton IMC et tes calories' },
+            { icon: '', text: 'Ton année de naissance', sub: 'Pour le métabolisme de base (BMR)' },
+            { icon: '', text: 'Ton objectif', sub: 'Prise de masse, sèche, maintien...' },
+            { icon: '', text: 'Cardio dans la saisie', sub: 'Tapis, vélo, rameur — calories auto' },
           ].map((item, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 12,
@@ -91,7 +91,7 @@ export default function UpdateBanner() {
           borderRadius: 12, color: 'white', fontSize: 14, fontFamily: 'var(--fm)',
           fontWeight: 800, cursor: 'pointer', letterSpacing: 0.5, marginBottom: 10
         }}>
-          ❤️ Voir la page Santé
+          Voir la page Santé
         </button>
 
         <button onClick={() => dismiss(false)} style={{

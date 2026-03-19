@@ -139,7 +139,7 @@ export default function HistoriquePage({ onChanged }) {
       {editSession && (
         <div className="modal-overlay open" onClick={e=>e.target===e.currentTarget&&setEditSession(null)}>
           <div className="modal" style={{maxHeight:'85vh',overflowY:'auto'}}>
-            <div className="modal-title">✏️ MODIFIER LA SÉANCE</div>
+            <div className="modal-title">MODIFIER LA SÉANCE</div>
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                 <div><label className="field-label">Date</label><input type="date" value={editSession.session_date} onChange={e=>setEditSession(p=>({...p,session_date:e.target.value}))}/></div>
@@ -160,7 +160,7 @@ export default function HistoriquePage({ onChanged }) {
                   {/* Ligne mode unilatéral */}
                   <div onClick={()=>toggleEditUnilateral(ei)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:8,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
                     <div>
-                      <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>💪 Mode unilatéral</span>
+                      <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>Mode unilatéral</span>
                       <span style={{fontSize:10,color:'var(--text3)',marginLeft:6}}>Poids et reps par côté (G / D)</span>
                     </div>
                     <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>

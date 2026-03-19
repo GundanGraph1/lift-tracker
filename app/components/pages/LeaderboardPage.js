@@ -32,7 +32,7 @@ export default function LeaderboardPage() {
 
   function Row({user,rank,value,detail,color}) {
     const medals = ['🥇','🥈','🥉']
-    const genderIcon = user.gender === 'female' ? '👩' : user.gender === 'other' ? '🧑' : '👨'
+    const genderIcon = user.gender === 'female' ? '♀' : user.gender === 'other' ? '·' : '♂'
     return (
       <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
         <div style={{width:28,textAlign:'center',fontSize:rank<3?20:14,color:rank>=3?'var(--text3)':'inherit'}}>{rank<3?medals[rank]:rank+1}</div>
@@ -133,19 +133,19 @@ export default function LeaderboardPage() {
   }
 
   const tabs = [
-    {k:'volume',l:'🔥 Volume'},
-    {k:'total',l:'📦 Total'},
+    {k:'volume',l:'Volume'},
+    {k:'total',l:'Sessions'},
     {k:'bench',l:'🏋️ Bench'},
     {k:'squat',l:'🦵 Squat'},
     {k:'deadlift',l:'⛓️ Deadlift'},
-    {k:'sessions',l:'📅 Séances'}
+    {k:'sessions',l:'Séances'}
   ]
   const rows = buildRows()
 
   const genderTabs = [
-    {k:'all',   l:'🌍 Tous'},
-    {k:'male',  l:'👨 Hommes'},
-    {k:'female',l:'👩 Femmes'},
+    {k:'all',   l:'Tous'},
+    {k:'male',  l:'Hommes'},
+    {k:'female',l:'Femmes'},
   ]
 
   return (
@@ -178,7 +178,7 @@ export default function LeaderboardPage() {
       {loading&&<div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>⏳ Chargement...</div>}
       {!loading&&rows.length===0&&(
         <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>
-          <div style={{fontSize:40,marginBottom:12}}>🏆</div>
+          
           <p>Pas encore de données{genderFilter!=='all'?' pour cette catégorie':''}</p>
         </div>
       )}

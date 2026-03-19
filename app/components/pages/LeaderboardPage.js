@@ -6,6 +6,7 @@ import { normalize } from '../../../lib/constants'
 export default function LeaderboardPage() {
   const [tab, setTab] = useState('volume')
   const [genderFilter, setGenderFilter] = useState('all') // 'all' | 'male' | 'female'
+  const [period, setPeriod] = useState('all') // 'all' | 'month' | 'week'
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -51,7 +52,22 @@ export default function LeaderboardPage() {
 
   function buildRows() {
     if (!data) return []
-    const { users, sessions, prs } = data
+    const { users, sessions: allSessions, prs } = data
+
+    // Filtre période
+    const now = new Date()
+    const sessions = allSessions.filter(s => {
+      if (period === 'all') return true
+      const d = new Date(s.session_date + 'T12:00:00')
+      if (period === 'week') {
+        const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
+        return d >= weekAgo
+      }
+      if (period === 'month') {
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+      }
+      return true
+    })
 
     // Filtre genre
     const filteredUsers = genderFilter === 'all'
@@ -110,10 +126,11 @@ export default function LeaderboardPage() {
             best=parseFloat(p.weight);bestReps=p.reps;bestDate=p.date
           }
         })
-        // Puis scanner toutes les séances
+        // Puis scanner toutes les séances (déjà filtrées par période)
         sessions.filter(s=>s.user_id===u.id).forEach(s=>(s.exercises||[]).forEach(e=>{
           if(matchesEx(e.name)) e.sets.forEach(st=>{
-            if(parseFloat(st.w)>best){best=parseFloat(st.w);bestReps=st.r;bestDate=s.session_date}
+            const w = e.unilateral ? Math.max(parseFloat(st.wL)||0, parseFloat(st.wR)||0) : parseFloat(st.w)||0
+            if(w>best){best=w;bestReps=e.unilateral?(st.rL||st.rR):st.r;bestDate=s.session_date}
           })
         }))
         if(!best) return null
@@ -152,8 +169,21 @@ export default function LeaderboardPage() {
     <div>
       <div style={{marginBottom:20}}>
         <div className="page-title">TOP</div>
-        <div className="page-sub">Classement général</div>
+        <div className="page-sub">{period === 'week' ? 'Classement de la semaine' : period === 'month' ? 'Classement du mois' : 'Classement général'}</div>
         <hr className="page-divider" />
+      </div>
+
+      {/* Filtre période */}
+      <div style={{display:'flex',gap:6,marginBottom:10}}>
+        {[{k:'all',l:'Tout le temps'},{k:'month',l:'Ce mois'},{k:'week',l:'Cette semaine'}].map(p=>(
+          <button key={p.k} onClick={()=>setPeriod(p.k)} style={{
+            flex:1,padding:'8px 4px',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:10,
+            border:`1px solid ${period===p.k?'var(--red)':'var(--border)'}`,
+            background:period===p.k?'rgba(255,60,60,.12)':'var(--s1)',
+            color:period===p.k?'var(--red)':'var(--text3)',
+            transition:'all .15s'
+          }}>{p.l}</button>
+        ))}
       </div>
 
       {/* Filtre genre */}
@@ -179,7 +209,7 @@ export default function LeaderboardPage() {
       {!loading&&rows.length===0&&(
         <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>
           
-          <p>Pas encore de données{genderFilter!=='all'?' pour cette catégorie':''}</p>
+          <p>Pas encore de données{period!=='all'?` pour ${period==='week'?'cette semaine':'ce mois'}`:''}{genderFilter!=='all'?' dans cette catégorie':''}</p>
         </div>
       )}
       {!loading&&rows.length>0&&(

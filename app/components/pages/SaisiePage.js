@@ -7,6 +7,16 @@ import { showToast } from '../Toast'
 
 
 const BW_EXERCISES = ['Pompes', 'Push-Up Lesté']
+
+const TECHNIQUES = [
+  { k: 'dropset',    l: 'Drop set',    color: '#ef4444' },
+  { k: 'superset',   l: 'Super set',   color: '#8b5cf6' },
+  { k: 'restpause',  l: 'Rest-pause',  color: '#f97316' },
+  { k: 'giant',      l: 'Giant set',   color: '#06b6d4' },
+  { k: 'cluster',    l: 'Cluster',     color: '#10b981' },
+  { k: 'myo',        l: 'Myo-reps',    color: '#f59e0b' },
+]
+
 const isBW = (name) => BW_EXERCISES.some(bw => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest'))
 
 export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
@@ -608,12 +618,28 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                     )}
                   </div>
                 ) : (
-                  <div key={st.id} style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:6,alignItems:'center'}}>
-                    <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
-                    <input type="number" value={st.r} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'8px 4px',fontSize:14}}/>
-                    <input type="number" value={st.w} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)} placeholder={isBW(ex.name)?"Lest":"0"} min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'8px 4px',fontSize:14,borderColor:isBW(ex.name)&&!st.w?'var(--blue)':''}}/>
-                    <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
-                    <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
+                  <div key={st.id} style={{marginBottom:4}}>
+                    <div style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:2,alignItems:'center'}}>
+                      <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
+                      <input type="number" value={st.r} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'8px 4px',fontSize:14}}/>
+                      <input type="number" value={st.w} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)} placeholder={isBW(ex.name)?"Lest":"0"} min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'8px 4px',fontSize:14,borderColor:isBW(ex.name)&&!st.w?'var(--blue)':''}}/>
+                      <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
+                      <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
+                    </div>
+                    {/* Tags technique */}
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:34}}>
+                      {TECHNIQUES.map(t => {
+                        const active = st.technique === t.k
+                        return (
+                          <button key={t.k} onClick={()=>updateSet(ex.id,st.id,'technique', active ? null : t.k)} style={{
+                            padding:'2px 7px',fontSize:10,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',
+                            borderRadius:6,border:`1px solid ${active?t.color:'var(--border)'}`,
+                            background:active?`${t.color}20`:'transparent',
+                            color:active?t.color:'var(--text3)',transition:'all .15s',
+                          }}>{t.l}</button>
+                        )
+                      })}
+                    </div>
                   </div>
                 )
               ))}

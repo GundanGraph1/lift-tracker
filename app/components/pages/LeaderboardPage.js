@@ -14,13 +14,14 @@ export default function LeaderboardPage() {
 
   async function loadData() {
     setLoading(true)
-    const [usersRes, sessRes, prsRes] = await Promise.all([
+    const [usersRes, sessRes, prsRes, cardioRes] = await Promise.all([
       db.from('users').select('*'),
       db.from('sessions').select('*'),
-      db.from('prs').select('*')
+      db.from('prs').select('*'),
+      db.from('cardio_sessions').select('*'),
     ])
     const sessions = (sessRes.data||[]).map(s=>({...s,exercises:typeof s.exercises==='string'?JSON.parse(s.exercises):(s.exercises||[])}))
-    setData({ users: (usersRes.data||[]).filter(u=>!u.is_private), sessions, prs: prsRes.data||[] })
+    setData({ users: (usersRes.data||[]).filter(u=>!u.is_private), sessions, prs: prsRes.data||[], cardio: cardioRes.data||[] })
     setLoading(false)
   }
 
@@ -52,13 +53,27 @@ export default function LeaderboardPage() {
 
   function buildRows() {
     if (!data) return []
-    const { users, sessions: allSessions, prs } = data
+    const { users, sessions: allSessions, prs, cardio: allCardio } = data
 
     // Filtre période
     const now = new Date()
     const sessions = allSessions.filter(s => {
       if (period === 'all') return true
       const d = new Date(s.session_date + 'T12:00:00')
+      if (period === 'week') {
+        const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
+        return d >= weekAgo
+      }
+      if (period === 'month') {
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+      }
+      return true
+    })
+
+    // Filtre période sur cardio
+    const cardio = allCardio.filter(c => {
+      if (period === 'all') return true
+      const d = new Date(c.session_date + 'T12:00:00')
       if (period === 'week') {
         const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
         return d >= weekAgo
@@ -146,16 +161,28 @@ export default function LeaderboardPage() {
         return {user:u,val:us.length,detail:`Dernière le ${new Date(sorted[0].session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})}`,color:'var(--purple)',display:`${us.length}`}
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
+    if (tab==='cardio') {
+      return filteredUsers.map(u=>{
+        const uc = cardio.filter(c=>c.user_id===u.id)
+        if (!uc.length) return null
+        // Points = minutes totales pondérées par les kcal (si dispo)
+        const totalMins = uc.reduce((a,c)=>a+(parseInt(c.duration_min)||0),0)
+        const totalKcal = uc.reduce((a,c)=>a+(parseInt(c.calories_burned)||0),0)
+        const pts = totalKcal > 0 ? totalKcal : totalMins * 8 // fallback 8pts/min si pas de kcal
+        const detail = `${uc.length} séance${uc.length>1?'s':''} · ${totalMins} min`
+        return {user:u,val:pts,detail,color:'var(--green)',display:totalKcal>0?`${pts.toLocaleString('fr')} kcal`:`${totalMins} min`}
+      }).filter(Boolean).sort((a,b)=>b.val-a.val)
+    }
     return []
   }
 
   const tabs = [
-    {k:'volume',l:'Volume'},
-    {k:'total',l:'Sessions'},
-    {k:'bench',l:'🏋️ Bench'},
-    {k:'squat',l:'🦵 Squat'},
-    {k:'deadlift',l:'⛓️ Deadlift'},
-    {k:'sessions',l:'Séances'}
+    {k:'volume',  l:'Volume',    group:'muscu'},
+    {k:'sessions',l:'Séances',   group:'muscu'},
+    {k:'bench',   l:'🏋️ Bench',  group:'pr'},
+    {k:'squat',   l:'🦵 Squat',  group:'pr'},
+    {k:'deadlift',l:'⛓️ Deadlift',group:'pr'},
+    {k:'cardio',  l:'🏃 Cardio', group:'cardio'},
   ]
   const rows = buildRows()
 
@@ -200,9 +227,24 @@ export default function LeaderboardPage() {
         ))}
       </div>
 
-      {/* Filtre catégorie */}
-      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>
-        {tabs.map(t=><button key={t.k} onClick={()=>setTab(t.k)} className={`lb-tab${tab===t.k?' active':''}`}>{t.l}</button>)}
+      {/* Filtre catégorie — groupé */}
+      <div style={{marginBottom:16}}>
+        {[{g:'muscu',l:'Muscu'},{g:'pr',l:'PRs'},{g:'cardio',l:'Cardio'}].map(group=>(
+          <div key={group.g} style={{marginBottom:6}}>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:2,color:'var(--text3)',textTransform:'uppercase',marginBottom:4}}>{group.l}</div>
+            <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+              {tabs.filter(t=>t.group===group.g).map(t=>(
+                <button key={t.k} onClick={()=>setTab(t.k)} style={{
+                  padding:'7px 12px',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:10,
+                  border:`1px solid ${tab===t.k?'var(--red)':'var(--border)'}`,
+                  background:tab===t.k?'var(--red)':'var(--s1)',
+                  color:tab===t.k?'white':'var(--text2)',
+                  transition:'all .15s'
+                }}>{t.l}</button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       {loading&&<div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>⏳ Chargement...</div>}

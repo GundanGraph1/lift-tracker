@@ -512,6 +512,13 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     setShowPresets(false); showToast(`✅ Preset "${preset.name}" chargé !`)
   }
 
+  function loadPreset(preset) {
+     setMuscles(preset.muscle ? preset.muscle.split('+') : ['Dos'])
+     setExercises((preset.exercises||[]).map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map((s,i)=>({id:Date.now()+i,r:s.r||'',w:s.w||''}))})))
+     setActivePreset({id: preset.id, name: preset.name})
+     setShowPresets(false); showToast(`✅ Preset "${preset.name}" chargé !`)
+   }
+
   return (
     <div>
       <div style={{marginBottom:20}}>
@@ -928,11 +935,5 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     )}
     </div>
   )
-   function loadPreset(preset) {
-     setMuscles(preset.muscle ? preset.muscle.split('+') : ['Dos'])
-     setExercises((preset.exercises||[]).map(e=>({id:Date.now()+Math.random(),name:e.name,sets:(e.sets||[]).map((s,i)=>({id:Date.now()+i,r:s.r||'',w:s.w||''}))})))
-     setActivePreset({id: preset.id, name: preset.name})
-     setShowPresets(false); showToast(`✅ Preset "${preset.name}" chargé !`)
-   }
-   }
+
 }

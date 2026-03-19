@@ -169,15 +169,19 @@ export default function AppShell() {
             onMouseEnter={e=>e.currentTarget.style.background='var(--s2)'}
             onMouseLeave={e=>e.currentTarget.style.background='transparent'}
           >
-            {isImg
-              ? <div style={{width:30,height:30,borderRadius:'50%',backgroundImage:`url(${currentUser.avatar})`,backgroundSize:'cover',backgroundPosition:'center',border:'2px solid var(--border2)',flexShrink:0}} />
-              : <div style={{width:30,height:30,borderRadius:'50%',background:'var(--s3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,border:'2px solid var(--border2)',flexShrink:0}}>{currentUser?.avatar||'💪'}</div>
-            }
+            <div style={{width:30,height:30,borderRadius:'50%',border:'2px solid var(--border2)',flexShrink:0,overflow:'hidden',background:'var(--s3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {isImg
+                ? <img src={currentUser.avatar} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
+                : <span style={{fontSize:15}}>{currentUser?.avatar||'💪'}</span>
+              }
+            </div>
             <span style={{fontSize:13,fontWeight:600,color:'var(--text2)'}}>{currentUser?.username}</span>
-            <span style={{fontSize:11,color:'var(--text3)'}}>⚙️</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,opacity:0.45}}>
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
           </div>
-          {/* Logout */}
-          <button onClick={logout} title="Changer de profil" style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>↩</button>
+
         </div>
       </div>
 
@@ -301,7 +305,7 @@ export default function AppShell() {
       )}
 
       {/* Edit Profile Modal */}
-      {showEdit && <EditProfile onClose={() => setShowEdit(false)} />}
+      {showEdit && <EditProfile onClose={() => setShowEdit(false)} onLogout={() => { logout(); setShowEdit(false); }} />}
 
       {/* Update Banner — shown once per user per version */}
       <UpdateBanner />

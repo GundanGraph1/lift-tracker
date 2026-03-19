@@ -213,7 +213,7 @@ export default function StatsPage() {
       <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
           <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>🏅 Mes badges</div>
-          <button onClick={checkBadges} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'4px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>🔄 Vérifier</button>
+          <button onClick={checkBadges} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'4px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>↺ Vérifier</button>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
           {Object.values(BADGES).filter(b => !b.gender || b.gender === (currentUser?.gender||'male')).map(b=>{
@@ -244,7 +244,7 @@ export default function StatsPage() {
       <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
         <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>📈 Progression par exercice</div>
         <div className="ex-search-wrap" style={{marginBottom:8}}>
-          <span>🔍</span>
+          
           <input className="ex-search-input" value={progSearch} onChange={e=>filterProgSearch(e.target.value)} placeholder="Cherche un exercice..." />
         </div>
         {progResults.length>0&&(

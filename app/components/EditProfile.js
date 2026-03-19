@@ -1,12 +1,14 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { db } from '../../lib/supabase'
 import { useStore, actions } from '../../lib/store'
 import { THEMES, FONT_PACKS, applyTheme, getThemeFromUser } from '../../lib/themes'
+import { BADGES } from '../../lib/constants'
 import { showToast } from './Toast'
 
-export default function EditProfile({ onClose }) {
+export default function EditProfile({ onClose, onLogout }) {
   const currentUser = useStore(s => s.currentUser)
+  const userBadges = useStore(s => s.userBadges) || []
   const { themeKey: initTheme, fontKey: initFont } = getThemeFromUser(currentUser)
 
   const [tab, setTab] = useState('profil') // 'profil' | 'theme'
@@ -21,10 +23,20 @@ export default function EditProfile({ onClose }) {
   const [pin, setPin] = useState('')
   const [photo, setPhoto] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
+  const [showCrop, setShowCrop] = useState(false)
+  const [cropSrc, setCropSrc] = useState(null)
+  const [cropPos, setCropPos] = useState({ x: 0, y: 0 })
+  const [cropScale, setCropScale] = useState(1)
+  const cropCanvasRef = useRef(null)
+  const cropImgRef = useRef(null)
+  const dragStart = useRef(null)
   const [saving, setSaving] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(initTheme)
   const [selectedFont, setSelectedFont] = useState(initFont)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [pinConfirm, setPinConfirm] = useState('')
+  const [featuredBadges, setFeaturedBadges] = useState(currentUser?.featured_badges || [])
+  const [pinError, setPinError] = useState('')
   const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
   const [gender, setGender] = useState(currentUser?.gender || 'male')
 
@@ -34,10 +46,61 @@ export default function EditProfile({ onClose }) {
   function handlePhoto(e) {
     const file = e.target.files[0]
     if (!file) return
-    setPhotoFile(file)
     const reader = new FileReader()
-    reader.onload = ev => setPhoto(ev.target.result)
+    reader.onload = ev => {
+      setCropSrc(ev.target.result)
+      setCropPos({ x: 0, y: 0 })
+      setCropScale(1)
+      setShowCrop(true)
+    }
     reader.readAsDataURL(file)
+  }
+
+  function applyCrop() {
+    const canvas = cropCanvasRef.current
+    const img = cropImgRef.current
+    if (!canvas || !img) return
+    const size = 300
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, size, size)
+    // Cercle clip
+    ctx.beginPath()
+    ctx.arc(size/2, size/2, size/2, 0, Math.PI*2)
+    ctx.clip()
+    // Calculer dimensions
+    const displaySize = 220
+    const imgRatio = img.naturalWidth / img.naturalHeight
+    let dw, dh
+    if (imgRatio > 1) { dh = displaySize * cropScale; dw = dh * imgRatio }
+    else { dw = displaySize * cropScale; dh = dw / imgRatio }
+    const sx = (size/2) - (dw/2) + cropPos.x * (size/displaySize)
+    const sy = (size/2) - (dh/2) + cropPos.y * (size/displaySize)
+    ctx.drawImage(img, sx, sy, dw, dh)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+    setPhoto(dataUrl)
+    // Convertir en File
+    canvas.toBlob(blob => { if (blob) setPhotoFile(new File([blob], 'avatar.jpg', { type: 'image/jpeg' })) }, 'image/jpeg', 0.92)
+    setShowCrop(false)
+  }
+
+  function onCropMouseDown(e) {
+    dragStart.current = { mx: e.clientX, my: e.clientY, px: cropPos.x, py: cropPos.y }
+  }
+  function onCropMouseMove(e) {
+    if (!dragStart.current) return
+    setCropPos({ x: dragStart.current.px + e.clientX - dragStart.current.mx, y: dragStart.current.py + e.clientY - dragStart.current.my })
+  }
+  function onCropMouseUp() { dragStart.current = null }
+  function onCropTouchStart(e) {
+    const t = e.touches[0]
+    dragStart.current = { mx: t.clientX, my: t.clientY, px: cropPos.x, py: cropPos.y }
+  }
+  function onCropTouchMove(e) {
+    if (!dragStart.current) return
+    const t = e.touches[0]
+    setCropPos({ x: dragStart.current.px + t.clientX - dragStart.current.mx, y: dragStart.current.py + t.clientY - dragStart.current.my })
   }
 
   function selectTheme(tk) {
@@ -71,6 +134,7 @@ export default function EditProfile({ onClose }) {
       height_cm: heightCm ? parseInt(heightCm) : null,
       birth_year: birthYear ? parseInt(birthYear) : null,
       goal, activity_level: activityLevel,
+      featured_badges: featuredBadges.length ? featuredBadges : null,
       daily_steps_avg: dailySteps ? parseInt(dailySteps) : null,
       sessions_per_week: sessionsPerWeek ? parseInt(sessionsPerWeek) : null,
     }
@@ -87,7 +151,9 @@ export default function EditProfile({ onClose }) {
   }
 
   async function deleteProfile() {
-    if (!confirmDelete) { setConfirmDelete(true); return }
+    if (!confirmDelete) { setConfirmDelete(true); setPinConfirm(''); setPinError(''); return }
+    // Vérifier le PIN avant suppression
+    if (pinConfirm !== String(currentUser.pin)) { setPinError('Code PIN incorrect'); return }
     await db.from('sessions').delete().eq('user_id', currentUser.id)
     await db.from('prs').delete().eq('user_id', currentUser.id)
     await db.from('badges').delete().eq('user_id', currentUser.id)
@@ -108,13 +174,19 @@ export default function EditProfile({ onClose }) {
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 0' }}>
-          <div className="modal-title" style={{ marginBottom: 0 }}>⚙️ MON PROFIL</div>
+          <div className="modal-title" style={{ marginBottom: 0, display:'flex', alignItems:'center', gap:8 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}>
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            MON PROFIL
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text3)', fontSize: 22, cursor: 'pointer' }}>×</button>
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 6, padding: '14px 20px 0' }}>
-          {[{ k: 'profil', l: '👤 Profil' }, { k: 'theme', l: '🎨 Thème' }].map(t => (
+          {[{ k: 'profil', l: 'Profil' }, { k: 'theme', l: 'Thème' }].map(t => (
             <button key={t.k} onClick={() => setTab(t.k)} style={{
               flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: tab === t.k ? 'var(--red)' : 'var(--s3)',
@@ -139,7 +211,7 @@ export default function EditProfile({ onClose }) {
                       : <span>{currentUser?.avatar || '💪'}</span>
                     }
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✏️</div>
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}></div>
                 </label>
                 <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>Appuie sur la photo pour changer</span>
@@ -155,7 +227,7 @@ export default function EditProfile({ onClose }) {
               <div>
                 <label className="field-label">Genre</label>
                 <div style={{display:'flex',gap:8,marginTop:4}}>
-                  {[{val:'male',label:'👨 Homme'},{val:'female',label:'👩 Femme'},{val:'other',label:'🧑 Autre'}].map(g=>(
+                  {[{val:'male',label:'♂ Homme'},{val:'female',label:'♀ Femme'},{val:'other',label:'· Autre'}].map(g=>(
                     <button key={g.val} onClick={()=>setGender(g.val)} style={{flex:1,padding:'8px 6px',borderRadius:10,border:`1px solid ${gender===g.val?'var(--red)':'var(--border)'}`,background:gender===g.val?'rgba(255,60,60,0.1)':'var(--s2)',color:gender===g.val?'var(--red)':'var(--text2)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>{g.label}</button>
                   ))}
                 </div>
@@ -253,9 +325,78 @@ export default function EditProfile({ onClose }) {
               </div>
 
 
+              {/* Badges mis en avant */}
+              {userBadges.length > 0 && (
+                <div>
+                  <label className="field-label" style={{fontSize:10}}>Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 5)</span></label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                    {userBadges.map(b=>{
+                      const badge = BADGES[b.badge_key]
+                      if (!badge) return null
+                      const isSelected = featuredBadges.includes(b.badge_key)
+                      return (
+                        <div key={b.badge_key} onClick={()=>{
+                          if (isSelected) setFeaturedBadges(f=>f.filter(k=>k!==b.badge_key))
+                          else if (featuredBadges.length < 5) setFeaturedBadges(f=>[...f,b.badge_key])
+                        }} style={{
+                          display:'flex',alignItems:'center',gap:6,padding:'6px 10px',
+                          borderRadius:10,cursor:'pointer',transition:'all .15s',
+                          background:isSelected?`${badge.color}18`:'var(--s3)',
+                          border:`1.5px solid ${isSelected?badge.color:'var(--border)'}`,
+                          opacity: !isSelected && featuredBadges.length>=3 ? 0.35 : 1,
+                        }}>
+                          <span style={{fontSize:16}}>{badge.icon}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:isSelected?badge.color:'var(--text2)',fontFamily:'var(--fb)'}}>{badge.name}</span>
+                          {isSelected && <span style={{fontSize:9,color:badge.color,fontWeight:700}}>✓</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {featuredBadges.length === 0 && (
+                    <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>Aucun badge affiché — sélectionnes-en jusqu&apos;à 5</div>
+                  )}
+                </div>
+              )}
+
+              {/* Mode privé */}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Mode privé</div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>Ne pas apparaître dans le feed et le leaderboard</div>
+                </div>
+                <div onClick={()=>setIsPrivate(p=>!p)} style={{width:44,height:24,borderRadius:12,background:isPrivate?'var(--purple)':'var(--s3)',border:'1px solid var(--border)',cursor:'pointer',position:'relative',transition:'all .2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:3,left:isPrivate?22:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </div>
+              </div>
+
               <button className="btn-primary" onClick={save} disabled={saving} style={{ marginTop: 4 }}>
                 {saving ? '⏳ Sauvegarde...' : '💾 Enregistrer'}
               </button>
+
+              {/* Déconnexion */}
+              <button onClick={onLogout} style={{width:'100%',padding:'11px',borderRadius:12,cursor:'pointer',background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13,transition:'all .2s'}}>
+                Se déconnecter
+              </button>
+
+              {/* Suppression */}
+              <div style={{borderTop:'1px solid var(--border)',paddingTop:12,marginTop:4}}>
+                {!confirmDelete ? (
+                  <button onClick={deleteProfile} style={{width:'100%',padding:'11px',borderRadius:12,cursor:'pointer',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.25)',color:'var(--red)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13,transition:'all .2s'}}>
+                    Supprimer le profil
+                  </button>
+                ) : (
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    <div style={{fontSize:12,color:'var(--red)',fontWeight:700,textAlign:'center'}}>Confirme ton PIN pour supprimer</div>
+                    <input type="password" inputMode="numeric" maxLength={4} value={pinConfirm} onChange={e=>{setPinConfirm(e.target.value.replace(/\D/g,'').slice(0,4));setPinError('')}} placeholder="••••" style={{textAlign:'center',fontSize:20,letterSpacing:8,padding:'10px',borderColor:pinError?'var(--red)':'var(--border)'}}/>
+                    {pinError && <div style={{fontSize:11,color:'var(--red)',textAlign:'center'}}>{pinError}</div>}
+                    <div style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Action irréversible — toutes tes données seront supprimées</div>
+                    <div style={{display:'flex',gap:8}}>
+                      <button onClick={()=>{setConfirmDelete(false);setPinConfirm('');setPinError('')}} style={{flex:1,padding:'10px',borderRadius:10,cursor:'pointer',background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13}}>Annuler</button>
+                      <button onClick={deleteProfile} style={{flex:1,padding:'10px',borderRadius:10,cursor:'pointer',background:'var(--red)',border:'none',color:'white',fontFamily:'var(--fb)',fontWeight:700,fontSize:13}}>Supprimer</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
             </div>
           )}
@@ -263,31 +404,6 @@ export default function EditProfile({ onClose }) {
           {/* ── THEME TAB ── */}
           {tab === 'theme' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-              {/* Mode privé */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 12 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>🔒 Mode privé</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Ne pas apparaître dans le feed et le leaderboard</div>
-                </div>
-                <div onClick={() => setIsPrivate(p => !p)} style={{ width: 44, height: 24, borderRadius: 12, background: isPrivate ? 'var(--purple)' : 'var(--s3)', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
-                  <div style={{ position: 'absolute', top: 3, left: isPrivate ? 22 : 3, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                </div>
-              </div>
-
-              {/* Supprimer profil */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
-                <button onClick={deleteProfile} style={{
-                  width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
-                  background: confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.1)',
-                  border: `1px solid ${confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.3)'}`,
-                  color: 'var(--red)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
-                  transition: 'all .2s'
-                }}>
-                  {confirmDelete ? '⚠️ Confirmer la suppression' : '🗑 Supprimer le profil'}
-                </button>
-                {confirmDelete && <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 6 }}>Cette action est irréversible. Toutes tes données seront perdues.</div>}
-              </div>
 
               {/* Aperçu thème */}
               <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px', textAlign: 'center' }}>
@@ -320,7 +436,7 @@ export default function EditProfile({ onClose }) {
               {/* Thèmes premium */}
               <div>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 4 }}>
-                  ✦ Thèmes premium
+                  Thèmes premium
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 12, opacity: 0.7 }}>Fond personnalisé + effets lumineux</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -374,6 +490,49 @@ export default function EditProfile({ onClose }) {
 
         </div>
       </div>
+
+      {/* Modale recadrage photo */}
+      {showCrop && cropSrc && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'white',fontFamily:'var(--fm)',letterSpacing:1}}>RECADRER LA PHOTO</div>
+
+          {/* Zone de crop */}
+          <div style={{position:'relative',width:220,height:220,borderRadius:'50%',overflow:'hidden',border:'3px solid var(--red)',cursor:'grab',background:'#111',flexShrink:0}}
+            onMouseDown={onCropMouseDown} onMouseMove={onCropMouseMove} onMouseUp={onCropMouseUp} onMouseLeave={onCropMouseUp}
+            onTouchStart={onCropTouchStart} onTouchMove={onCropTouchMove} onTouchEnd={onCropMouseUp}
+          >
+            <img ref={cropImgRef} src={cropSrc} alt="" draggable={false}
+              onLoad={()=>{ setCropScale(1); setCropPos({x:0,y:0}) }}
+              style={{
+                position:'absolute',
+                width: cropImgRef.current && cropImgRef.current.naturalWidth > cropImgRef.current.naturalHeight ? 'auto' : `${220 * cropScale}px`,
+                height: cropImgRef.current && cropImgRef.current.naturalWidth > cropImgRef.current.naturalHeight ? `${220 * cropScale}px` : 'auto',
+                left: `calc(50% + ${cropPos.x}px)`,
+                top: `calc(50% + ${cropPos.y}px)`,
+                transform:'translate(-50%, -50%)',
+                userSelect:'none', pointerEvents:'none',
+              }}
+            />
+          </div>
+
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',textAlign:'center'}}>Glisse pour repositionner</div>
+
+          {/* Zoom */}
+          <div style={{display:'flex',alignItems:'center',gap:10,width:220}}>
+            <span style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>−</span>
+            <input type="range" min="0.5" max="3" step="0.05" value={cropScale} onChange={e=>setCropScale(parseFloat(e.target.value))} style={{flex:1,accentColor:'var(--red)'}}/>
+            <span style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>+</span>
+          </div>
+
+          {/* Canvas caché pour générer l'image finale */}
+          <canvas ref={cropCanvasRef} style={{display:'none'}}/>
+
+          <div style={{display:'flex',gap:10,width:220}}>
+            <button onClick={()=>setShowCrop(false)} style={{flex:1,padding:'11px',borderRadius:10,background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13,cursor:'pointer'}}>Annuler</button>
+            <button onClick={applyCrop} style={{flex:2,padding:'11px',borderRadius:10,background:'var(--red)',border:'none',color:'white',fontFamily:'var(--fm)',fontWeight:800,fontSize:13,cursor:'pointer',letterSpacing:1}}>✓ VALIDER</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

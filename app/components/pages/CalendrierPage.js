@@ -92,7 +92,7 @@ export default function CalendrierPage() {
       {selectedSessions.length>0&&(
         <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:14,padding:16,marginBottom:16}}>
           <div style={{fontFamily:'var(--fm)',fontSize:16,fontWeight:700,marginBottom:12}}>
-            📅 {new Date(selectedDate+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}
+            {new Date(selectedDate+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}
           </div>
           {selectedSessions.map(s=>(
             <div key={s.id} style={{marginBottom:12}}>
@@ -113,7 +113,7 @@ export default function CalendrierPage() {
 
       {/* Annual recap */}
       <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16}}>
-        <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>📆 Récap {currentYear}</div>
+        <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}> Récap {currentYear}</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
           {[
             {label:'Séances',val:yearSessions.length,color:'var(--red)'},

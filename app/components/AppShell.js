@@ -174,10 +174,9 @@ export default function AppShell() {
               : <div style={{width:30,height:30,borderRadius:'50%',background:'var(--s3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,border:'2px solid var(--border2)',flexShrink:0}}>{currentUser?.avatar||'💪'}</div>
             }
             <span style={{fontSize:13,fontWeight:600,color:'var(--text2)'}}>{currentUser?.username}</span>
-            <span style={{fontSize:11,color:'var(--text3)'}}>⚙️</span>
+            <span style={{fontSize:11,color:'var(--text3)'}}></span>
           </div>
-          {/* Logout */}
-          <button onClick={logout} title="Changer de profil" style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>↩</button>
+
         </div>
       </div>
 
@@ -301,7 +300,7 @@ export default function AppShell() {
       )}
 
       {/* Edit Profile Modal */}
-      {showEdit && <EditProfile onClose={() => setShowEdit(false)} />}
+      {showEdit && <EditProfile onClose={() => setShowEdit(false)} onLogout={() => { logout(); setShowEdit(false); }} />}
 
       {/* Update Banner — shown once per user per version */}
       <UpdateBanner />

@@ -5,7 +5,7 @@ import { useStore, actions } from '../../lib/store'
 import { THEMES, FONT_PACKS, applyTheme, getThemeFromUser } from '../../lib/themes'
 import { showToast } from './Toast'
 
-export default function EditProfile({ onClose }) {
+export default function EditProfile({ onClose, onLogout }) {
   const currentUser = useStore(s => s.currentUser)
   const { themeKey: initTheme, fontKey: initFont } = getThemeFromUser(currentUser)
 
@@ -114,7 +114,7 @@ export default function EditProfile({ onClose }) {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 6, padding: '14px 20px 0' }}>
-          {[{ k: 'profil', l: '👤 Profil' }, { k: 'theme', l: '🎨 Thème' }].map(t => (
+          {[{ k: 'profil', l: 'Profil' }, { k: 'theme', l: 'Thème' }].map(t => (
             <button key={t.k} onClick={() => setTab(t.k)} style={{
               flex: 1, padding: '8px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
               background: tab === t.k ? 'var(--red)' : 'var(--s3)',
@@ -139,7 +139,7 @@ export default function EditProfile({ onClose }) {
                       : <span>{currentUser?.avatar || '💪'}</span>
                     }
                   </div>
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>✏️</div>
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 26, height: 26, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}></div>
                 </label>
                 <input id="photo-input" type="file" accept="image/*" onChange={handlePhoto} style={{ display: 'none' }} />
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>Appuie sur la photo pour changer</span>
@@ -267,7 +267,7 @@ export default function EditProfile({ onClose }) {
               {/* Mode privé */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 12 }}>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>🔒 Mode privé</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Mode privé</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Ne pas apparaître dans le feed et le leaderboard</div>
                 </div>
                 <div onClick={() => setIsPrivate(p => !p)} style={{ width: 44, height: 24, borderRadius: 12, background: isPrivate ? 'var(--purple)' : 'var(--s3)', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
@@ -275,8 +275,16 @@ export default function EditProfile({ onClose }) {
                 </div>
               </div>
 
-              {/* Supprimer profil */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4 }}>
+              {/* Déconnexion + Supprimer profil */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4, display:'flex', flexDirection:'column', gap:8 }}>
+                <button onClick={onLogout} style={{
+                  width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
+                  background: 'var(--s3)', border: '1px solid var(--border)',
+                  color: 'var(--text2)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
+                  transition: 'all .2s'
+                }}>
+                  Se déconnecter
+                </button>
                 <button onClick={deleteProfile} style={{
                   width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
                   background: confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.1)',
@@ -284,7 +292,7 @@ export default function EditProfile({ onClose }) {
                   color: 'var(--red)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
                   transition: 'all .2s'
                 }}>
-                  {confirmDelete ? '⚠️ Confirmer la suppression' : '🗑 Supprimer le profil'}
+                  {confirmDelete ? 'Confirmer la suppression' : 'Supprimer le profil'}
                 </button>
                 {confirmDelete && <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 6 }}>Cette action est irréversible. Toutes tes données seront perdues.</div>}
               </div>
@@ -320,7 +328,7 @@ export default function EditProfile({ onClose }) {
               {/* Thèmes premium */}
               <div>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 4 }}>
-                  ✦ Thèmes premium
+                  Thèmes premium
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 12, opacity: 0.7 }}>Fond personnalisé + effets lumineux</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>

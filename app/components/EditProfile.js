@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { db } from '../../lib/supabase'
 import { useStore, actions } from '../../lib/store'
 import { THEMES, FONT_PACKS, applyTheme, getThemeFromUser } from '../../lib/themes'
@@ -23,6 +23,13 @@ export default function EditProfile({ onClose, onLogout }) {
   const [pin, setPin] = useState('')
   const [photo, setPhoto] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
+  const [showCrop, setShowCrop] = useState(false)
+  const [cropSrc, setCropSrc] = useState(null)
+  const [cropPos, setCropPos] = useState({ x: 0, y: 0 })
+  const [cropScale, setCropScale] = useState(1)
+  const cropCanvasRef = useRef(null)
+  const cropImgRef = useRef(null)
+  const dragStart = useRef(null)
   const [saving, setSaving] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState(initTheme)
   const [selectedFont, setSelectedFont] = useState(initFont)
@@ -39,10 +46,61 @@ export default function EditProfile({ onClose, onLogout }) {
   function handlePhoto(e) {
     const file = e.target.files[0]
     if (!file) return
-    setPhotoFile(file)
     const reader = new FileReader()
-    reader.onload = ev => setPhoto(ev.target.result)
+    reader.onload = ev => {
+      setCropSrc(ev.target.result)
+      setCropPos({ x: 0, y: 0 })
+      setCropScale(1)
+      setShowCrop(true)
+    }
     reader.readAsDataURL(file)
+  }
+
+  function applyCrop() {
+    const canvas = cropCanvasRef.current
+    const img = cropImgRef.current
+    if (!canvas || !img) return
+    const size = 300
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, size, size)
+    // Cercle clip
+    ctx.beginPath()
+    ctx.arc(size/2, size/2, size/2, 0, Math.PI*2)
+    ctx.clip()
+    // Calculer dimensions
+    const displaySize = 220
+    const imgRatio = img.naturalWidth / img.naturalHeight
+    let dw, dh
+    if (imgRatio > 1) { dh = displaySize * cropScale; dw = dh * imgRatio }
+    else { dw = displaySize * cropScale; dh = dw / imgRatio }
+    const sx = (size/2) - (dw/2) + cropPos.x * (size/displaySize)
+    const sy = (size/2) - (dh/2) + cropPos.y * (size/displaySize)
+    ctx.drawImage(img, sx, sy, dw, dh)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+    setPhoto(dataUrl)
+    // Convertir en File
+    canvas.toBlob(blob => { if (blob) setPhotoFile(new File([blob], 'avatar.jpg', { type: 'image/jpeg' })) }, 'image/jpeg', 0.92)
+    setShowCrop(false)
+  }
+
+  function onCropMouseDown(e) {
+    dragStart.current = { mx: e.clientX, my: e.clientY, px: cropPos.x, py: cropPos.y }
+  }
+  function onCropMouseMove(e) {
+    if (!dragStart.current) return
+    setCropPos({ x: dragStart.current.px + e.clientX - dragStart.current.mx, y: dragStart.current.py + e.clientY - dragStart.current.my })
+  }
+  function onCropMouseUp() { dragStart.current = null }
+  function onCropTouchStart(e) {
+    const t = e.touches[0]
+    dragStart.current = { mx: t.clientX, my: t.clientY, px: cropPos.x, py: cropPos.y }
+  }
+  function onCropTouchMove(e) {
+    if (!dragStart.current) return
+    const t = e.touches[0]
+    setCropPos({ x: dragStart.current.px + t.clientX - dragStart.current.mx, y: dragStart.current.py + t.clientY - dragStart.current.my })
   }
 
   function selectTheme(tk) {
@@ -431,6 +489,47 @@ export default function EditProfile({ onClose, onLogout }) {
 
         </div>
       </div>
+    </div>
+
+      {/* Modale recadrage photo */}
+      {showCrop && cropSrc && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:400,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16,padding:20}}>
+          <div style={{fontSize:14,fontWeight:700,color:'white',fontFamily:'var(--fm)',letterSpacing:1}}>RECADRER LA PHOTO</div>
+
+          {/* Zone de crop */}
+          <div style={{position:'relative',width:220,height:220,borderRadius:'50%',overflow:'hidden',border:'3px solid var(--red)',cursor:'grab',background:'#111',flexShrink:0}}
+            onMouseDown={onCropMouseDown} onMouseMove={onCropMouseMove} onMouseUp={onCropMouseUp} onMouseLeave={onCropMouseUp}
+            onTouchStart={onCropTouchStart} onTouchMove={onCropTouchMove} onTouchEnd={onCropMouseUp}
+          >
+            <img ref={cropImgRef} src={cropSrc} alt="" draggable={false} style={{
+              position:'absolute',
+              width: (() => { const r = cropImgRef.current; if (!r) return '100%'; return r.naturalWidth > r.naturalHeight ? 'auto' : `${220 * cropScale}px` })(),
+              height: (() => { const r = cropImgRef.current; if (!r) return '100%'; return r.naturalWidth > r.naturalHeight ? `${220 * cropScale}px` : 'auto' })(),
+              left: `calc(50% + ${cropPos.x}px)`,
+              top: `calc(50% + ${cropPos.y}px)`,
+              transform: 'translate(-50%, -50%)',
+              userSelect:'none', pointerEvents:'none',
+            }} onLoad={()=>{ setCropScale(1); setCropPos({x:0,y:0}) }} />
+          </div>
+
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',textAlign:'center'}}>Glisse pour repositionner</div>
+
+          {/* Zoom */}
+          <div style={{display:'flex',alignItems:'center',gap:10,width:220}}>
+            <span style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>−</span>
+            <input type="range" min="0.5" max="3" step="0.05" value={cropScale} onChange={e=>setCropScale(parseFloat(e.target.value))} style={{flex:1,accentColor:'var(--red)'}}/>
+            <span style={{color:'rgba(255,255,255,0.5)',fontSize:12}}>+</span>
+          </div>
+
+          {/* Canvas caché pour générer l'image finale */}
+          <canvas ref={cropCanvasRef} style={{display:'none'}}/>
+
+          <div style={{display:'flex',gap:10,width:220}}>
+            <button onClick={()=>setShowCrop(false)} style={{flex:1,padding:'11px',borderRadius:10,background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13,cursor:'pointer'}}>Annuler</button>
+            <button onClick={applyCrop} style={{flex:2,padding:'11px',borderRadius:10,background:'var(--red)',border:'none',color:'white',fontFamily:'var(--fm)',fontWeight:800,fontSize:13,cursor:'pointer',letterSpacing:1}}>✓ VALIDER</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -57,18 +57,38 @@ export default function FeedPage() {
   }
 
   async function toggleReaction(sessionId, emoji) {
+    // Mise à jour optimiste — on modifie le state local immédiatement, sans recharger
+    const prevReactions = items.reactions
+    const myExisting = items.reactions.find(r => r.user_id===currentUser.id && r.session_id===sessionId)
+
+    let newReactions
+    if (myExisting) {
+      if (myExisting.emoji===emoji) {
+        // Supprimer la réaction
+        newReactions = items.reactions.filter(r => !(r.user_id===currentUser.id && r.session_id===sessionId))
+      } else {
+        // Changer l'emoji
+        newReactions = items.reactions.map(r => r.user_id===currentUser.id && r.session_id===sessionId ? {...r, emoji} : r)
+      }
+    } else {
+      // Ajouter
+      newReactions = [...items.reactions, {id: Date.now(), user_id: currentUser.id, session_id: sessionId, emoji}]
+    }
+    // Appliquer immédiatement — zéro latence visible
+    setItems(prev => ({...prev, reactions: newReactions}))
+
+    // Synchro Supabase en arrière-plan
     try {
-      const { data: existing } = await db.from('reactions').select('*').eq('user_id',currentUser.id).eq('session_id',sessionId).single()
-      if (existing) {
-        if (existing.emoji===emoji) await db.from('reactions').delete().eq('id',existing.id)
-        else await db.from('reactions').update({emoji}).eq('id',existing.id)
+      if (myExisting) {
+        if (myExisting.emoji===emoji) await db.from('reactions').delete().eq('id',myExisting.id)
+        else await db.from('reactions').update({emoji}).eq('id',myExisting.id)
       } else {
         await db.from('reactions').insert([{user_id:currentUser.id,session_id:sessionId,emoji}])
       }
     } catch(e) {
-      await db.from('reactions').insert([{user_id:currentUser.id,session_id:sessionId,emoji}])
+      // Rollback si erreur
+      setItems(prev => ({...prev, reactions: prevReactions}))
     }
-    loadFeed()
   }
 
   if (loading) return <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>⏳ Chargement...</div>

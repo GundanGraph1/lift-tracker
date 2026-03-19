@@ -489,7 +489,6 @@ export default function EditProfile({ onClose, onLogout }) {
 
         </div>
       </div>
-    </div>
 
       {/* Modale recadrage photo */}
       {showCrop && cropSrc && (
@@ -501,15 +500,18 @@ export default function EditProfile({ onClose, onLogout }) {
             onMouseDown={onCropMouseDown} onMouseMove={onCropMouseMove} onMouseUp={onCropMouseUp} onMouseLeave={onCropMouseUp}
             onTouchStart={onCropTouchStart} onTouchMove={onCropTouchMove} onTouchEnd={onCropMouseUp}
           >
-            <img ref={cropImgRef} src={cropSrc} alt="" draggable={false} style={{
-              position:'absolute',
-              width: (() => { const r = cropImgRef.current; if (!r) return '100%'; return r.naturalWidth > r.naturalHeight ? 'auto' : `${220 * cropScale}px` })(),
-              height: (() => { const r = cropImgRef.current; if (!r) return '100%'; return r.naturalWidth > r.naturalHeight ? `${220 * cropScale}px` : 'auto' })(),
-              left: `calc(50% + ${cropPos.x}px)`,
-              top: `calc(50% + ${cropPos.y}px)`,
-              transform: 'translate(-50%, -50%)',
-              userSelect:'none', pointerEvents:'none',
-            }} onLoad={()=>{ setCropScale(1); setCropPos({x:0,y:0}) }} />
+            <img ref={cropImgRef} src={cropSrc} alt="" draggable={false}
+              onLoad={()=>{ setCropScale(1); setCropPos({x:0,y:0}) }}
+              style={{
+                position:'absolute',
+                width: cropImgRef.current && cropImgRef.current.naturalWidth > cropImgRef.current.naturalHeight ? 'auto' : `${220 * cropScale}px`,
+                height: cropImgRef.current && cropImgRef.current.naturalWidth > cropImgRef.current.naturalHeight ? `${220 * cropScale}px` : 'auto',
+                left: `calc(50% + ${cropPos.x}px)`,
+                top: `calc(50% + ${cropPos.y}px)`,
+                transform:'translate(-50%, -50%)',
+                userSelect:'none', pointerEvents:'none',
+              }}
+            />
           </div>
 
           <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',textAlign:'center'}}>Glisse pour repositionner</div>

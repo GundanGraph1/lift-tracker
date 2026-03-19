@@ -25,6 +25,8 @@ export default function EditProfile({ onClose, onLogout }) {
   const [selectedTheme, setSelectedTheme] = useState(initTheme)
   const [selectedFont, setSelectedFont] = useState(initFont)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [pinConfirm, setPinConfirm] = useState('')
+  const [pinError, setPinError] = useState('')
   const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
   const [gender, setGender] = useState(currentUser?.gender || 'male')
 
@@ -87,7 +89,9 @@ export default function EditProfile({ onClose, onLogout }) {
   }
 
   async function deleteProfile() {
-    if (!confirmDelete) { setConfirmDelete(true); return }
+    if (!confirmDelete) { setConfirmDelete(true); setPinConfirm(''); setPinError(''); return }
+    // Vérifier le PIN avant suppression
+    if (pinConfirm !== String(currentUser.pin)) { setPinError('Code PIN incorrect'); return }
     await db.from('sessions').delete().eq('user_id', currentUser.id)
     await db.from('prs').delete().eq('user_id', currentUser.id)
     await db.from('badges').delete().eq('user_id', currentUser.id)
@@ -253,9 +257,45 @@ export default function EditProfile({ onClose, onLogout }) {
               </div>
 
 
+              {/* Mode privé */}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Mode privé</div>
+                  <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>Ne pas apparaître dans le feed et le leaderboard</div>
+                </div>
+                <div onClick={()=>setIsPrivate(p=>!p)} style={{width:44,height:24,borderRadius:12,background:isPrivate?'var(--purple)':'var(--s3)',border:'1px solid var(--border)',cursor:'pointer',position:'relative',transition:'all .2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:3,left:isPrivate?22:3,width:16,height:16,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.2)'}}/>
+                </div>
+              </div>
+
               <button className="btn-primary" onClick={save} disabled={saving} style={{ marginTop: 4 }}>
                 {saving ? '⏳ Sauvegarde...' : '💾 Enregistrer'}
               </button>
+
+              {/* Déconnexion */}
+              <button onClick={onLogout} style={{width:'100%',padding:'11px',borderRadius:12,cursor:'pointer',background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13,transition:'all .2s'}}>
+                Se déconnecter
+              </button>
+
+              {/* Suppression */}
+              <div style={{borderTop:'1px solid var(--border)',paddingTop:12,marginTop:4}}>
+                {!confirmDelete ? (
+                  <button onClick={deleteProfile} style={{width:'100%',padding:'11px',borderRadius:12,cursor:'pointer',background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.25)',color:'var(--red)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13,transition:'all .2s'}}>
+                    Supprimer le profil
+                  </button>
+                ) : (
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    <div style={{fontSize:12,color:'var(--red)',fontWeight:700,textAlign:'center'}}>Confirme ton PIN pour supprimer</div>
+                    <input type="password" inputMode="numeric" maxLength={4} value={pinConfirm} onChange={e=>{setPinConfirm(e.target.value.replace(/\D/g,'').slice(0,4));setPinError('')}} placeholder="••••" style={{textAlign:'center',fontSize:20,letterSpacing:8,padding:'10px',borderColor:pinError?'var(--red)':'var(--border)'}}/>
+                    {pinError && <div style={{fontSize:11,color:'var(--red)',textAlign:'center'}}>{pinError}</div>}
+                    <div style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Action irréversible — toutes tes données seront supprimées</div>
+                    <div style={{display:'flex',gap:8}}>
+                      <button onClick={()=>{setConfirmDelete(false);setPinConfirm('');setPinError('')}} style={{flex:1,padding:'10px',borderRadius:10,cursor:'pointer',background:'var(--s3)',border:'1px solid var(--border)',color:'var(--text2)',fontFamily:'var(--fb)',fontWeight:700,fontSize:13}}>Annuler</button>
+                      <button onClick={deleteProfile} style={{flex:1,padding:'10px',borderRadius:10,cursor:'pointer',background:'var(--red)',border:'none',color:'white',fontFamily:'var(--fb)',fontWeight:700,fontSize:13}}>Supprimer</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
             </div>
           )}
@@ -263,39 +303,6 @@ export default function EditProfile({ onClose, onLogout }) {
           {/* ── THEME TAB ── */}
           {tab === 'theme' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-              {/* Mode privé */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 12 }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Mode privé</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Ne pas apparaître dans le feed et le leaderboard</div>
-                </div>
-                <div onClick={() => setIsPrivate(p => !p)} style={{ width: 44, height: 24, borderRadius: 12, background: isPrivate ? 'var(--purple)' : 'var(--s3)', border: '1px solid var(--border)', cursor: 'pointer', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
-                  <div style={{ position: 'absolute', top: 3, left: isPrivate ? 22 : 3, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'all .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                </div>
-              </div>
-
-              {/* Déconnexion + Supprimer profil */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, marginTop: 4, display:'flex', flexDirection:'column', gap:8 }}>
-                <button onClick={onLogout} style={{
-                  width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
-                  background: 'var(--s3)', border: '1px solid var(--border)',
-                  color: 'var(--text2)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
-                  transition: 'all .2s'
-                }}>
-                  Se déconnecter
-                </button>
-                <button onClick={deleteProfile} style={{
-                  width: '100%', padding: '11px', borderRadius: 12, cursor: 'pointer',
-                  background: confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.1)',
-                  border: `1px solid ${confirmDelete ? 'var(--red)' : 'rgba(239,68,68,.3)'}`,
-                  color: 'var(--red)', fontFamily: 'var(--fb)', fontWeight: 700, fontSize: 13,
-                  transition: 'all .2s'
-                }}>
-                  {confirmDelete ? 'Confirmer la suppression' : 'Supprimer le profil'}
-                </button>
-                {confirmDelete && <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 6 }}>Cette action est irréversible. Toutes tes données seront perdues.</div>}
-              </div>
 
               {/* Aperçu thème */}
               <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px', textAlign: 'center' }}>

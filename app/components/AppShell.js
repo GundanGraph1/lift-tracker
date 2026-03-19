@@ -26,6 +26,9 @@ export default function AppShell() {
 
   useEffect(() => {
     if (!currentUser) return
+    // Restaurer la dernière page visitée
+    const savedPage = localStorage.getItem('lt_page')
+    if (savedPage) actions.setCurrentPage(savedPage)
     const { themeKey, fontKey } = getThemeFromUser(currentUser)
     applyTheme(themeKey, fontKey)
     loadAll()

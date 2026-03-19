@@ -177,7 +177,7 @@ export default function FeedPage() {
           sessReactions.forEach(r=>{ reactionGroups[r.emoji]=(reactionGroups[r.emoji]||0)+1 })
           // Badges affichés : featured_badges si défini, sinon tous (max 3)
           const userBadgeKeys = badges.filter(b=>b.user_id===user.id).map(b=>b.badge_key)
-          const featured = user.featured_badges?.length ? user.featured_badges : userBadgeKeys.slice(0,3)
+          const featured = user.featured_badges?.length ? user.featured_badges : userBadgeKeys.slice(0,5)
           const userBadgeIcons = featured.map(k=>BADGES[k]?.icon||'').filter(Boolean).join('')
           const dateStr = new Date(s.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})
           const isExpanded = expanded[s.id]

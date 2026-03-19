@@ -263,16 +263,16 @@ export default function EditProfile({ onClose, onLogout }) {
               {/* Badges mis en avant */}
               {(useStore(s=>s.userBadges)||[]).length > 0 && (
                 <div>
-                  <label className="field-label" style={{fontSize:10}}>Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 3)</span></label>
+                  <label className="field-label" style={{fontSize:10}}>Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 5)</span></label>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                    {(useStore(s=>s.userBadges)||[]).filter(b=>!BADGES[b.badge_key]?.secret).map(b=>{
+                    {(useStore(s=>s.userBadges)||[]).map(b=>{
                       const badge = BADGES[b.badge_key]
                       if (!badge) return null
                       const isSelected = featuredBadges.includes(b.badge_key)
                       return (
                         <div key={b.badge_key} onClick={()=>{
                           if (isSelected) setFeaturedBadges(f=>f.filter(k=>k!==b.badge_key))
-                          else if (featuredBadges.length < 3) setFeaturedBadges(f=>[...f,b.badge_key])
+                          else if (featuredBadges.length < 5) setFeaturedBadges(f=>[...f,b.badge_key])
                         }} style={{
                           display:'flex',alignItems:'center',gap:6,padding:'6px 10px',
                           borderRadius:10,cursor:'pointer',transition:'all .15s',
@@ -288,7 +288,7 @@ export default function EditProfile({ onClose, onLogout }) {
                     })}
                   </div>
                   {featuredBadges.length === 0 && (
-                    <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>Aucun badge affiché — sélectionnes-en jusqu&apos;à 3</div>
+                    <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>Aucun badge affiché — sélectionnes-en jusqu&apos;à 5</div>
                   )}
                 </div>
               )}

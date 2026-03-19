@@ -156,8 +156,18 @@ export default function HistoriquePage({ onChanged }) {
                 <div key={ei} style={{background:'var(--s2)',borderRadius:12,padding:12,border:'1px solid var(--border)'}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                     <div style={{fontSize:13,fontWeight:600}}>{ex.name}</div>
-                    <button onClick={()=>toggleEditUnilateral(ei)} style={{background:ex.unilateral?'rgba(251,146,60,.15)':'none',border:ex.unilateral?'1px solid var(--orange)':'1px solid var(--border)',borderRadius:6,padding:'3px 8px',color:ex.unilateral?'var(--orange)':'var(--text3)',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'var(--fb)'}}>1️⃣ {ex.unilateral?'Uni ON':'Uni'}</button>
                   </div>
+                  {/* Ligne mode unilatéral */}
+                  <div onClick={()=>toggleEditUnilateral(ei)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:8,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
+                    <div>
+                      <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>💪 Mode unilatéral</span>
+                      <span style={{fontSize:10,color:'var(--text3)',marginLeft:6}}>Poids et reps par côté (G / D)</span>
+                    </div>
+                    <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
+                      <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                    </div>
+                  </div>
+
                   {ex.unilateral ? (
                     <>
                       <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr',gap:4,marginBottom:4}}>

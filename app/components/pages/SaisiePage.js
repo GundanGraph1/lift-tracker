@@ -555,7 +555,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
               <div style={{width:26,height:26,borderRadius:8,background:'var(--red)',color:'white',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{exercises.indexOf(ex)+1}</div>
               <div style={{flex:1,fontSize:14,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>{ex.name}{isBW(ex.name)&&<span style={{fontSize:10,fontWeight:700,background:'rgba(59,130,246,.2)',color:'var(--blue)',borderRadius:4,padding:'2px 6px',letterSpacing:1,flexShrink:0}}>BW</span>}</div>
-              <button onClick={()=>toggleUnilateral(ex.id)} title="Mode unilatéral" style={{background:ex.unilateral?'rgba(251,146,60,.15)':'none',border:ex.unilateral?'1px solid var(--orange)':'1px solid transparent',borderRadius:6,padding:'3px 7px',color:ex.unilateral?'var(--orange)':'var(--text3)',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'var(--fb)',transition:'all .15s',flexShrink:0}}>1️⃣</button>
               <button onClick={()=>removeExercise(ex.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
             </div>
             {last && (
@@ -565,6 +564,17 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               </div>
             )}
             <div style={{padding:'10px 14px'}}>
+              {/* Ligne mode unilatéral */}
+              <div onClick={()=>toggleUnilateral(ex.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:6,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
+                <div>
+                  <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>💪 Mode unilatéral</span>
+                  <span style={{fontSize:10,color:'var(--text3)',marginLeft:6}}>Poids et reps par côté (G / D)</span>
+                </div>
+                <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
+                  <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                </div>
+              </div>
+
               {ex.unilateral ? (
                 <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr 28px',gap:4,marginBottom:6}}>
                   <span/><span style={{fontSize:10,color:'var(--orange)',textAlign:'center',fontWeight:700}}>Reps G</span><span style={{fontSize:10,color:'var(--orange)',textAlign:'center',fontWeight:700}}>kg G</span><span style={{fontSize:10,color:'var(--blue)',textAlign:'center',fontWeight:700}}>Reps D</span><span style={{fontSize:10,color:'var(--blue)',textAlign:'center',fontWeight:700}}>kg D</span><span/>

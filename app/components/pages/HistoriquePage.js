@@ -125,10 +125,19 @@ export default function HistoriquePage({ onChanged }) {
       return { dir:'eq', label }
     }
 
-    // Sinon : comparer avec la séance précédente du même groupe musculaire (hors preset)
-    const prev = sessions.filter(ss=>ss.muscle===s.muscle&&ss.id!==s.id&&!ss.preset_id).slice(idx)
+    // Sinon : comparer avec la séance précédente du même groupe musculaire
+    const prev = sessions.filter(ss=>ss.muscle===s.muscle&&ss.id!==s.id).slice(idx)
     if (!prev.length) return null
     const p = prev[0]
+
+    // Vérifier que les deux séances ont assez d'exercices en commun (>= 50%)
+    // pour que la comparaison soit pertinente
+    const sNames = new Set((s.exercises||[]).map(e=>normalize(e.name)))
+    const pNames = new Set((p.exercises||[]).map(e=>normalize(e.name)))
+    const commonCount = [...sNames].filter(n => pNames.has(n)).length
+    const minSize = Math.min(sNames.size, pNames.size)
+    if (minSize > 0 && commonCount / minSize < 0.5) return null // trop différentes → pas de flèche
+
     if (s.total_volume > p.total_volume) return { dir:'up', pct: Math.round((s.total_volume-p.total_volume)/p.total_volume*100) }
     if (s.total_volume < p.total_volume) return { dir:'down', pct: Math.round((p.total_volume-s.total_volume)/p.total_volume*100) }
     return { dir:'eq' }

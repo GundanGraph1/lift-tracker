@@ -8,6 +8,7 @@ import { showToast } from './Toast'
 
 export default function EditProfile({ onClose, onLogout }) {
   const currentUser = useStore(s => s.currentUser)
+  const userBadges = useStore(s => s.userBadges) || []
   const { themeKey: initTheme, fontKey: initFont } = getThemeFromUser(currentUser)
 
   const [tab, setTab] = useState('profil') // 'profil' | 'theme'
@@ -266,11 +267,11 @@ export default function EditProfile({ onClose, onLogout }) {
 
 
               {/* Badges mis en avant */}
-              {(useStore(s=>s.userBadges)||[]).length > 0 && (
+              {userBadges.length > 0 && (
                 <div>
                   <label className="field-label" style={{fontSize:10}}>Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 5)</span></label>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                    {(useStore(s=>s.userBadges)||[]).map(b=>{
+                    {userBadges.map(b=>{
                       const badge = BADGES[b.badge_key]
                       if (!badge) return null
                       const isSelected = featuredBadges.includes(b.badge_key)

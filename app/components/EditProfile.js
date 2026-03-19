@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { db } from '../../lib/supabase'
 import { useStore, actions } from '../../lib/store'
 import { THEMES, FONT_PACKS, applyTheme, getThemeFromUser } from '../../lib/themes'
+import { BADGES } from '../../lib/constants'
 import { showToast } from './Toast'
 
 export default function EditProfile({ onClose, onLogout }) {
@@ -26,6 +27,7 @@ export default function EditProfile({ onClose, onLogout }) {
   const [selectedFont, setSelectedFont] = useState(initFont)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [pinConfirm, setPinConfirm] = useState('')
+  const [featuredBadges, setFeaturedBadges] = useState(currentUser?.featured_badges || [])
   const [pinError, setPinError] = useState('')
   const [isPrivate, setIsPrivate] = useState(currentUser?.is_private || false)
   const [gender, setGender] = useState(currentUser?.gender || 'male')
@@ -73,6 +75,7 @@ export default function EditProfile({ onClose, onLogout }) {
       height_cm: heightCm ? parseInt(heightCm) : null,
       birth_year: birthYear ? parseInt(birthYear) : null,
       goal, activity_level: activityLevel,
+      featured_badges: featuredBadges.length ? featuredBadges : null,
       daily_steps_avg: dailySteps ? parseInt(dailySteps) : null,
       sessions_per_week: sessionsPerWeek ? parseInt(sessionsPerWeek) : null,
     }
@@ -159,7 +162,7 @@ export default function EditProfile({ onClose, onLogout }) {
               <div>
                 <label className="field-label">Genre</label>
                 <div style={{display:'flex',gap:8,marginTop:4}}>
-                  {[{val:'male',label:'👨 Homme'},{val:'female',label:'👩 Femme'},{val:'other',label:'🧑 Autre'}].map(g=>(
+                  {[{val:'male',label:'♂ Homme'},{val:'female',label:'♀ Femme'},{val:'other',label:'· Autre'}].map(g=>(
                     <button key={g.val} onClick={()=>setGender(g.val)} style={{flex:1,padding:'8px 6px',borderRadius:10,border:`1px solid ${gender===g.val?'var(--red)':'var(--border)'}`,background:gender===g.val?'rgba(255,60,60,0.1)':'var(--s2)',color:gender===g.val?'var(--red)':'var(--text2)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>{g.label}</button>
                   ))}
                 </div>
@@ -256,6 +259,39 @@ export default function EditProfile({ onClose, onLogout }) {
                 </div>
               </div>
 
+
+              {/* Badges mis en avant */}
+              {(useStore(s=>s.userBadges)||[]).length > 0 && (
+                <div>
+                  <label className="field-label" style={{fontSize:10}}>Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 3)</span></label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                    {(useStore(s=>s.userBadges)||[]).filter(b=>!BADGES[b.badge_key]?.secret).map(b=>{
+                      const badge = BADGES[b.badge_key]
+                      if (!badge) return null
+                      const isSelected = featuredBadges.includes(b.badge_key)
+                      return (
+                        <div key={b.badge_key} onClick={()=>{
+                          if (isSelected) setFeaturedBadges(f=>f.filter(k=>k!==b.badge_key))
+                          else if (featuredBadges.length < 3) setFeaturedBadges(f=>[...f,b.badge_key])
+                        }} style={{
+                          display:'flex',alignItems:'center',gap:6,padding:'6px 10px',
+                          borderRadius:10,cursor:'pointer',transition:'all .15s',
+                          background:isSelected?`${badge.color}18`:'var(--s3)',
+                          border:`1.5px solid ${isSelected?badge.color:'var(--border)'}`,
+                          opacity: !isSelected && featuredBadges.length>=3 ? 0.35 : 1,
+                        }}>
+                          <span style={{fontSize:16}}>{badge.icon}</span>
+                          <span style={{fontSize:11,fontWeight:600,color:isSelected?badge.color:'var(--text2)',fontFamily:'var(--fb)'}}>{badge.name}</span>
+                          {isSelected && <span style={{fontSize:9,color:badge.color,fontWeight:700}}>✓</span>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {featuredBadges.length === 0 && (
+                    <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>Aucun badge affiché — sélectionnes-en jusqu&apos;à 3</div>
+                  )}
+                </div>
+              )}
 
               {/* Mode privé */}
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 14px',background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12}}>

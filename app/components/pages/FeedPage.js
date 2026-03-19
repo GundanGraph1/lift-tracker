@@ -175,7 +175,10 @@ export default function FeedPage() {
           const myReaction = sessReactions.find(r=>r.user_id===currentUser.id)
           const reactionGroups = {}
           sessReactions.forEach(r=>{ reactionGroups[r.emoji]=(reactionGroups[r.emoji]||0)+1 })
-          const userBadgeIcons = badges.filter(b=>b.user_id===user.id).map(b=>BADGES[b.badge_key]?.icon||'').filter(Boolean).join('')
+          // Badges affichés : featured_badges si défini, sinon tous (max 3)
+          const userBadgeKeys = badges.filter(b=>b.user_id===user.id).map(b=>b.badge_key)
+          const featured = user.featured_badges?.length ? user.featured_badges : userBadgeKeys.slice(0,3)
+          const userBadgeIcons = featured.map(k=>BADGES[k]?.icon||'').filter(Boolean).join('')
           const dateStr = new Date(s.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})
           const isExpanded = expanded[s.id]
           return (
@@ -190,7 +193,7 @@ export default function FeedPage() {
                     {userBadgeIcons&&<span style={{fontSize:12}}>{userBadgeIcons}</span>}
                   </div>
                   <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>
-                    {timeAgo(s.created_at)} {"·"} {"📅"} {dateStr}{s.session_time?` · ⏰ ${s.session_time}`:''}
+                    {timeAgo(s.created_at)} {"·"} {"📅"} {dateStr}{s.session_time?` · ${s.session_time}`:''}
                   </div>
                 </div>
                 <div style={{textAlign:'right',flexShrink:0}}>

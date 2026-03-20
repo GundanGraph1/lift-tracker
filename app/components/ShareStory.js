@@ -9,13 +9,14 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [customColor, setCustomColor] = useState(null)
 
   const muscles = (session.muscle||'').split('+').map(m => MUSCLE_LABELS[m]||m)
   const muscleColor = MUSCLE_COLORS[(session.muscle||'').split('+')[0]] || '#ff3c3c'
   // Use user's theme accent color if set, otherwise fallback to muscle color
   const { themeKey } = getThemeFromUser(user)
   const themeAccent = THEMES.find(t=>t.key===themeKey)?.preview || muscleColor
-  const storyColor = themeAccent
+  const storyColor = customColor || themeAccent
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
     .sort((a,b) => b.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0) - a.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0))
@@ -26,19 +27,21 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    setReady(false)
     const ctx = canvas.getContext('2d')
-    // Story format 1080x1920
     canvas.width = 1080
     canvas.height = 1920
     draw(ctx, canvas)
-  }, [])
+  }, [customColor])
 
   function hex2rgb(hex) {
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
     return `${r},${g},${b}`
   }
 
-  function draw(ctx, canvas) {
+
+
+  async function draw(ctx, canvas) {
     const muscleCol = storyColor
     const W = canvas.width, H = canvas.height
     // Safe zone: Instagram crops ~60px top/bottom, ~30px sides on some phones
@@ -68,12 +71,31 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     glow2.addColorStop(1, 'transparent')
     ctx.fillStyle = glow2; ctx.fillRect(0, 0, W, H)
 
-    // ── HEADER (y: 120 to 380) ──
-    // Logo
-    ctx.font = '900 88px "Barlow Condensed", sans-serif'
-    ctx.fillStyle = muscleCol
-    ctx.textAlign = 'left'
-    ctx.fillText('GRINDSET', M, 210)
+    // ── HEADER — Logo typo chargé depuis /public/logo_typo.svg ──
+    // -- HEADER -- Logo typo embarque en data URL
+    const LOGO_DATA_URL = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20391.99%20115.3%22%3E%3Cg%20fill%3D%22white%22%3E%3Cpath%20d%3D%22M71.84%2C76.86h-12.72c-2.17%2C0-4.08%2C1.48-4.55%2C3.6-1.64%2C7.4-8.26%2C12.95-16.14%2C12.95s-14.77-5.78-16.24-13.41c-.35-1.81-1.87-3.14-3.71-3.14H3.98c-2.25%2C0-4%2C1.96-3.76%2C4.2%2C2.09%2C19.26%2C18.4%2C34.24%2C38.2%2C34.24s35.41-14.35%2C38.05-33.02c.4-2.85-1.75-5.42-4.63-5.42Z%22/%3E%3Cpath%20d%3D%22M82.99%2C0h-44.56C16.3%2C0-1.46%2C18.7.09%2C41.15c1.31%2C18.95%2C16.66%2C34.3%2C35.61%2C35.61%2C22.45%2C1.55%2C41.15-16.21%2C41.15-38.33v-.04c0-2.4-1.95-4.34-4.35-4.34h-13.12c-2.41%2C0-4.43%2C1.92-4.43%2C4.33%2C0%2C.36%2C0%2C.73-.03%2C1.1-.48%2C7.74-6.45%2C14.25-14.14%2C15.33-10.54%2C1.47-19.56-7.08-18.87-17.49.56-8.5%2C8.41-15.42%2C16.93-15.42h44.14c3.33%2C0%2C6.02-2.7%2C6.02-6.02V6.02c0-3.33-2.7-6.02-6.02-6.02Z%22/%3E%3Cpath%20d%3D%22M115.05%2C43.21c-2.04.22-3.98.88-5.81%2C1.98-2.27%2C1.33-4.21%2C3.18-5.81%2C5.51v-5.77c0-.8-.65-1.44-1.44-1.44h-11.38c-.8%2C0-1.44.65-1.44%2C1.44v37.91c0%2C.8.65%2C1.44%2C1.44%2C1.44h11.38c.8%2C0%2C1.44-.65%2C1.44-1.44v-16.37c0-3%2C.76-5.12%2C2.24-6.33%2C1.51-1.21%2C3.82-1.82%2C6.9-1.82h4v-13.68c0-.83-.7-1.53-1.52-1.44Z%22/%3E%3Cpath%20d%3D%22M123.17%2C43.49h11.21c.84%2C0%2C1.51.68%2C1.51%2C1.51v37.77c0%2C.84-.68%2C1.51-1.51%2C1.51h-11.21c-.84%2C0-1.51-.68-1.51-1.51v-37.77c0-.84.68-1.51%2C1.51-1.51Z%22/%3E%3Cpath%20d%3D%22M170.72%2C43.13c-2.76%2C0-5.21.58-7.33%2C1.73-2.15%2C1.12-3.85%2C2.63-5.09%2C4.45v-4.22c0-.88-.71-1.6-1.6-1.6h-11.07c-.88%2C0-1.6.71-1.6%2C1.6v37.6c0%2C.88.71%2C1.6%2C1.6%2C1.6h11.07c.88%2C0%2C1.6-.71%2C1.6-1.6v-20.3c0-2.3.61-4.15%2C1.82-5.48s2.88-2%2C5-2%2C3.66.67%2C4.88%2C2c1.21%2C1.33%2C1.82%2C3.18%2C1.82%2C5.48v20.3c0%2C.88.71%2C1.6%2C1.6%2C1.6h11.04c.88%2C0%2C1.6-.71%2C1.6-1.6v-22.18c0-5.33-1.36-9.57-4.12-12.69-2.79-3.12-6.51-4.69-11.21-4.69Z%22/%3E%3Cpath%20d%3D%22M233.22%2C30.5h-10.36c-1.09%2C0-1.98.89-1.98%2C1.98v16.61c-1.15-1.88-2.79-3.36-4.85-4.45-2.06-1.09-4.39-1.64-7-1.64-3.24%2C0-6.21.85-8.87%2C2.54-2.67%2C1.7-4.76%2C4.12-6.3%2C7.27-1.51%2C3.15-2.27%2C6.81-2.27%2C11.02s.76%2C7.93%2C2.27%2C11.08c1.54%2C3.18%2C3.63%2C5.63%2C6.27%2C7.33%2C2.63%2C1.7%2C5.57%2C2.54%2C8.81%2C2.54%2C2.79%2C0%2C5.18-.58%2C7.21-1.7%2C2.03-1.09%2C3.6-2.6%2C4.72-4.48v3.68c0%2C1.09.89%2C1.98%2C1.98%2C1.98h10.36c1.09%2C0%2C1.98-.89%2C1.98-1.98v-49.83c0-1.09-.89-1.98-1.98-1.98ZM218.81%2C70.11c-1.45%2C1.48-3.21%2C2.24-5.27%2C2.24s-3.91-.76-5.33-2.27c-1.39-1.54-2.09-3.6-2.09-6.24s.7-4.72%2C2.09-6.21c1.42-1.48%2C3.18-2.21%2C5.33-2.21s3.82.76%2C5.27%2C2.24c1.42%2C1.51%2C2.15%2C3.57%2C2.15%2C6.18s-.73%2C4.75-2.15%2C6.27Z%22/%3E%3Cpath%20d%3D%22M270.27%2C61.54c-1.97-.79-4.42-1.48-7.39-2.12-2.45-.55-4.27-1.06-5.36-1.57-1.12-.48-1.7-1.24-1.7-2.21%2C0-.76.3-1.36.94-1.82.58-.42%2C1.48-.64%2C2.63-.64%2C1.51%2C0%2C2.7.33%2C3.6%2C1.03.58.48%2C1.03%2C1.08%2C1.34%2C1.81.31.74%2C1.05%2C1.22%2C1.85%2C1.22h8.9c1.34%2C0%2C2.34-1.28%2C2-2.58-.81-3.09-2.41-5.66-4.82-7.74-3.06-2.6-7.24-3.91-12.57-3.91-3.6%2C0-6.66.58-9.21%2C1.73-2.54%2C1.18-4.45%2C2.73-5.78%2C4.69-1.3%2C1.97-1.94%2C4.15-1.94%2C6.57%2C0%2C2.82.7%2C5.06%2C2.12%2C6.69%2C1.42%2C1.64%2C3.12%2C2.85%2C5.06%2C3.57%2C1.94.73%2C4.36%2C1.36%2C7.27%2C1.94%2C2.57.61%2C4.42%2C1.12%2C5.51%2C1.61%2C1.12.48%2C1.7%2C1.24%2C1.7%2C2.27%2C0%2C.76-.36%2C1.39-1.03%2C1.88-.67.48-1.61.73-2.76.73-1.51%2C0-2.76-.36-3.79-1.09-.69-.49-1.19-1.1-1.5-1.85-.31-.74-1.04-1.21-1.84-1.21h-9.87c-1.33%2C0-2.35%2C1.26-2.01%2C2.55.45%2C1.71%2C1.26%2C3.29%2C2.4%2C4.75%2C1.67%2C2.18%2C3.94%2C3.88%2C6.81%2C5.09%2C2.88%2C1.24%2C6.18%2C1.88%2C9.84%2C1.88%2C3.45%2C0%2C6.45-.55%2C8.99-1.64%2C2.54-1.09%2C4.51-2.6%2C5.88-4.48%2C1.39-1.88%2C2.06-4.03%2C2.06-6.39%2C0-2.97-.73-5.3-2.21-7.03-1.45-1.73-3.18-2.97-5.15-3.73Z%22/%3E%3Cpath%20d%3D%22M313.7%2C45.46c-3.12-1.64-6.66-2.45-10.69-2.45s-7.66.85-10.78%2C2.54c-3.12%2C1.7-5.57%2C4.09-7.3%2C7.21-1.76%2C3.15-2.64%2C6.84-2.64%2C11.08s.88%2C8%2C2.67%2C11.15c1.76%2C3.15%2C4.21%2C5.57%2C7.33%2C7.27%2C3.12%2C1.7%2C6.69%2C2.54%2C10.72%2C2.54%2C3.33%2C0%2C6.39-.64%2C9.18-1.91%2C2.76-1.24%2C5.03-3%2C6.84-5.18%2C1.3-1.58%2C2.3-3.31%2C2.99-5.19.42-1.14-.43-2.35-1.64-2.35h-11.85c-.62%2C0-1.15.36-1.5.87-1.05%2C1.56-2.58%2C2.34-4.59%2C2.34-1.7%2C0-3.09-.55-4.18-1.64-1.09-1.09-1.7-2.76-1.85-5h26.95c.15-1.09.21-2.21.21-3.33%2C0-4.18-.88-7.78-2.6-10.87-1.76-3.06-4.18-5.42-7.27-7.09ZM296.47%2C59.84c.33-1.82%2C1.06-3.21%2C2.18-4.18%2C1.12-.94%2C2.54-1.39%2C4.3-1.39s3.18.48%2C4.36%2C1.48c1.15%2C1%2C1.73%2C2.36%2C1.73%2C4.09h-12.57Z%22/%3E%3Cpath%20d%3D%22M349.31%2C72.14c-1.21%2C0-2.06-.24-2.57-.73s-.76-1.27-.76-2.39v-12.17c0-.82.67-1.49%2C1.49-1.49h4.41c.82%2C0%2C1.49-.67%2C1.49-1.49v-8.89c0-.82-.67-1.49-1.49-1.49h-4.41c-.82%2C0-1.49-.67-1.49-1.49v-6.89c0-.82-.67-1.49-1.49-1.49h-11.34c-.82%2C0-1.49.67-1.49%2C1.49v6.89c0%2C.82-.67%2C1.49-1.49%2C1.49h-2.05c-.82%2C0-1.49.67-1.49%2C1.49v8.89c0%2C.82.67%2C1.49%2C1.49%2C1.49h2.05c.82%2C0%2C1.49.67%2C1.49%2C1.49v11.96c0%2C10.3%2C5.21%2C15.48%2C15.63%2C15.48h4.69c.82%2C0%2C1.49-.67%2C1.49-1.49v-10.65h-4.15Z%22/%3E%3Cpath%20d%3D%22M362.97%2C8.39c-5.18%2C0-9.36%2C4.2-9.36%2C9.38s4.19%2C9.38%2C9.36%2C9.38%2C9.38-4.2%2C9.38-9.38-4.2-9.38-9.38-9.38ZM362.97%2C24.94c-3.95%2C0-7.16-3.21-7.16-7.17s3.21-7.16%2C7.16-7.16%2C7.17%2C3.21%2C7.17%2C7.16-3.21%2C7.17-7.17%2C7.17Z%22/%3E%3Cpath%20d%3D%22M362.42%2C15.09c1.27-.29%2C2.58.34%2C3.14%2C1.58h2.32c-.58-2.5-2.97-4.15-5.49-3.82-2.92.39-4.81%2C3.12-4.2%2C5.99.34%2C1.6%2C1.45%2C2.88%2C2.97%2C3.51%2C1.97.81%2C4.18.3%2C5.58-1.3.57-.65%2C1.01-1.38%2C1.12-2.29l-2.26.02c-.53%2C1.31-1.82%2C1.93-3.11%2C1.69-1.27-.24-2.19-1.35-2.21-2.67-.02-1.28.89-2.43%2C2.15-2.72Z%22/%3E%3Ccircle%20cx%3D%22384.69%22%20cy%3D%2276.97%22%20r%3D%227.31%22/%3E%3C/g%3E%3C/svg%3E"
+    const logoImg = new Image()
+    logoImg.src = LOGO_DATA_URL
+    await new Promise(resolve => {
+      logoImg.onload = () => {
+        const tmpC = document.createElement('canvas')
+        const logoW = 620, logoH = Math.round(620 * 115.3 / 391.99)
+        tmpC.width = logoW; tmpC.height = logoH
+        const tmpCtx = tmpC.getContext('2d')
+        tmpCtx.drawImage(logoImg, 0, 0, logoW, logoH)
+        tmpCtx.globalCompositeOperation = 'source-in'
+        tmpCtx.fillStyle = muscleCol
+        tmpCtx.fillRect(0, 0, logoW, logoH)
+        ctx.drawImage(tmpC, M, 80)
+        resolve()
+      }
+      logoImg.onerror = () => {
+        ctx.font = '900 88px "Barlow Condensed", sans-serif'
+        ctx.fillStyle = muscleCol
+        ctx.fillText('GRINDSET', M, 210)
+        resolve()
+      }
+    })
 
     // Date
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
@@ -257,7 +279,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillText(user?.username||'', avCX + 72, footerY + 62)
       ctx.font = '500 30px "Barlow", sans-serif'
       ctx.fillStyle = 'rgba(255,255,255,0.35)'
-      ctx.fillText('lift-tracker-two.vercel.app', avCX + 72, footerY + 105)
+      ctx.fillText('grindset.app', avCX + 72, footerY + 105)
     }
 
     drawAvatar()
@@ -353,6 +375,38 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
         }}>
           <canvas ref={canvasRef} style={{width:'100%', height:'100%', objectFit:'contain'}} />
           {!ready && <div style={{position:'absolute', fontSize:12, color:'var(--text3)'}}>Génération...</div>}
+        </div>
+
+        {/* Sélecteur de couleur */}
+        <div>
+          <div style={{fontSize:11,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>Couleur de la story</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {[
+              {c:null,    l:'Thème'},
+              {c:'#ff073b',l:'Rouge'},
+              {c:'#3b82f6',l:'Bleu'},
+              {c:'#22c55e',l:'Vert'},
+              {c:'#f97316',l:'Orange'},
+              {c:'#a855f7',l:'Violet'},
+              {c:'#fbbf24',l:'Or'},
+              {c:'#ec4899',l:'Rose'},
+              {c:'#14b8a6',l:'Teal'},
+            ].map(({c,l})=>{
+              const active = customColor === c
+              const preview = c || themeAccent
+              return (
+                <button key={l} onClick={()=>setCustomColor(c)} style={{
+                  display:'flex',flexDirection:'column',alignItems:'center',gap:4,
+                  padding:'6px 8px',borderRadius:10,border:`2px solid ${active?preview:'var(--border)'}`,
+                  background:active?`${preview}15`:'var(--s2)',cursor:'pointer',
+                  transition:'all .15s',minWidth:44,
+                }}>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:preview,boxShadow:active?`0 0 6px ${preview}60`:'none'}}/>
+                  <span style={{fontSize:9,fontWeight:700,color:active?preview:'var(--text3)'}}>{l}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <button className="btn-primary" onClick={share} disabled={!ready||downloading}>

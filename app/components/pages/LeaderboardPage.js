@@ -105,21 +105,13 @@ export default function LeaderboardPage() {
         : users.filter(u => u.gender === 'female')
 
     if (tab==='volume') {
-      return filteredUsers.map(u=>{
-        const us=sessions.filter(s=>s.user_id===u.id)
-        if(!us.length) return null
-        const best=us.reduce((a,s)=>s.total_volume>a.total_volume?s:a,us[0])
-        const dateStr=new Date(best.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})
-        const muscleLabel=(best.muscle||'').split('+').map(m=>m).join('+').slice(0,12)
-        return {user:u,val:best.total_volume,detail:`${muscleLabel} — le ${dateStr}`,color:'var(--red)',display:`${best.total_volume.toLocaleString('fr')} kg`}
-      }).filter(Boolean).sort((a,b)=>b.val-a.val)
-    }
-    if (tab==='total') {
+      // Volume total du mois en cours (ou de la période sélectionnée)
       return filteredUsers.map(u=>{
         const us=sessions.filter(s=>s.user_id===u.id)
         if(!us.length) return null
         const total=us.reduce((a,s)=>a+(s.total_volume||0),0)
-        return {user:u,val:total,detail:`${us.length} séances au total`,color:'var(--green)',display:`${(total/1000).toFixed(1)}t`}
+        const periodLabel = period==='week'?'cette semaine':period==='month'?'ce mois':'au total'
+        return {user:u,val:total,detail:`${us.length} séance${us.length>1?'s':''} ${periodLabel}`,color:'var(--red)',display:`${(total/1000).toFixed(1)}t`}
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
     // Mots-clés stricts — pas de leg press, hack squat, romanian dans les big 3
@@ -166,6 +158,18 @@ export default function LeaderboardPage() {
         return {user:u,val:best,detail:`${bestReps} rep${bestReps>1?'s':''} — le ${dateStr}`,color:colors[tab],display:`${best} kg`}
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
+    if (tab==='best') {
+      // Meilleur volume sur une seule séance (all time, pas filtré par période)
+      const { sessions: allSess2 } = data
+      return filteredUsers.map(u=>{
+        const us=allSess2.filter(s=>s.user_id===u.id)
+        if(!us.length) return null
+        const best=us.reduce((a,s)=>((s.total_volume||0)>(a.total_volume||0)?s:a),us[0])
+        const dateStr=new Date(best.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+        const muscleLabel=(best.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join('+').slice(0,14)
+        return {user:u,val:best.total_volume||0,detail:`${muscleLabel} — ${dateStr}`,color:'var(--gold)',display:`${(best.total_volume||0).toLocaleString('fr')} kg`}
+      }).filter(Boolean).sort((a,b)=>b.val-a.val)
+    }
     if (tab==='sessions') {
       return filteredUsers.map(u=>{
         const us=sessions.filter(s=>s.user_id===u.id)
@@ -191,6 +195,7 @@ export default function LeaderboardPage() {
 
   const tabs = [
     {k:'volume',  l:'Volume',    group:'muscu'},
+    {k:'best',    l:'Best Séance',group:'muscu'},
     {k:'sessions',l:'Séances',   group:'muscu'},
     {k:'bench',   l:'🏋️ Bench',  group:'pr'},
     {k:'squat',   l:'🦵 Squat',  group:'pr'},

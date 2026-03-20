@@ -633,24 +633,48 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                   <div key={st.id} style={{marginBottom:4}}>
                     <div style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:2,alignItems:'center'}}>
                       <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
-                      <input type="number" value={st.r} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'8px 4px',fontSize:14}}/>
-                      <input type="number" value={st.w} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)} placeholder={isBW(ex.name)?"Lest":"0"} min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'8px 4px',fontSize:14,borderColor:isBW(ex.name)&&!st.w?'var(--blue)':''}}/>
+                      {(() => {
+                          const last = getLastPerf(ex.name)
+                          const lastSet = last?.exercise?.sets?.[si]
+                          const prevR = lastSet?.r ? String(lastSet.r) : ''
+                          const prevW = lastSet?.w ? String(lastSet.w) : ''
+                          const isEmpty = !st.r && !st.w
+                          return (<>
+                            <input type="number" value={st.r||''} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)}
+                              placeholder={prevR||'0'} min="0" inputMode="numeric"
+                              style={{textAlign:'center',padding:'8px 4px',fontSize:14,
+                                opacity: isEmpty&&prevR ? 0.95 : 1,
+                                borderColor: isEmpty&&prevR ? 'var(--border2)' : ''
+                              }}/>
+                            <input type="number" value={st.w||''} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)}
+                              placeholder={isBW(ex.name)?'Lest':(prevW||'0')} min="0" step="0.5" inputMode="decimal"
+                              style={{textAlign:'center',padding:'8px 4px',fontSize:14,
+                                borderColor: isBW(ex.name)&&!st.w?'var(--blue)': isEmpty&&prevW?'var(--border2)':'',
+                                opacity: isEmpty&&prevW ? 0.95 : 1,
+                              }}/>
+                          </>)
+                        })()}
                       <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
                     </div>
-                    {/* Tags technique */}
-                    <div style={{display:'flex',gap:4,flexWrap:'wrap',paddingLeft:34}}>
-                      {TECHNIQUES.map(t => {
-                        const active = st.technique === t.k
-                        return (
-                          <button key={t.k} onClick={()=>updateSet(ex.id,st.id,'technique', active ? null : t.k)} style={{
-                            padding:'2px 7px',fontSize:10,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',
-                            borderRadius:6,border:`1px solid ${active?t.color:'var(--border)'}`,
-                            background:active?`${t.color}20`:'transparent',
-                            color:active?t.color:'var(--text3)',transition:'all .15s',
-                          }}>{t.l}</button>
-                        )
-                      })}
+                    {/* Tag technique compact */}
+                    <div style={{paddingLeft:34,marginTop:2,position:'relative'}}>
+                      {st.technique ? (
+                        <div style={{display:'flex',alignItems:'center',gap:4}}>
+                          {(()=>{const t=TECHNIQUES.find(x=>x.k===st.technique);return t?(<button onClick={()=>updateSet(ex.id,st.id,'technique',null)} style={{padding:'2px 8px',fontSize:10,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:6,border:`1px solid ${t.color}`,background:`${t.color}20`,color:t.color}}>{t.l} ×</button>):null})()}
+                        </div>
+                      ) : (
+                        <div style={{position:'relative'}}>
+                          <button onClick={()=>updateSet(ex.id,st.id,'_showTech',!st._showTech)} style={{padding:'1px 7px',fontSize:10,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:6,border:'1px solid var(--border)',background:'transparent',color:'var(--text3)'}}>⚡ Technique</button>
+                          {st._showTech && (
+                            <div style={{position:'absolute',bottom:'calc(100% + 4px)',left:0,zIndex:50,background:'var(--s1)',border:'1px solid var(--border2)',borderRadius:10,padding:8,display:'flex',gap:5,flexWrap:'wrap',width:210,boxShadow:'0 4px 20px rgba(0,0,0,0.5)'}}>
+                              {TECHNIQUES.map(t=>(
+                                <button key={t.k} onClick={()=>updateSet(ex.id,st.id,'technique',t.k)} style={{padding:'3px 8px',fontSize:10,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:6,border:`1px solid ${t.color}`,background:`${t.color}15`,color:t.color}}>{t.l}</button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )

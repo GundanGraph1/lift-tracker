@@ -551,10 +551,8 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             })}
             {/* Bouton Autre — discret */}
             <button onClick={()=>setShowMuscleDetail(v=>!v)} style={{
-              padding:'8px 12px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',
-              borderRadius:10,border:'1px solid var(--border)',
-              background:'transparent',color:'var(--text3)',transition:'all .15s',
-              display:'flex',alignItems:'center',gap:4,
+              padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',
+              border:'none',background:'transparent',color:'var(--text3)',transition:'all .15s',
             }}>
               Autre {showMuscleDetail?'▲':'▼'}
             </button>
@@ -623,12 +621,13 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             <div style={{padding:'10px 14px'}}>
               {/* Ligne mode unilatéral */}
               <div onClick={()=>toggleUnilateral(ex.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:6,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
+                <div style={{flex:1}}/>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  {ex.unilateral && <span style={{fontSize:10,color:'var(--text3)'}}>poids et reps G / D</span>}
                   <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>Mode unilatéral</span>
-                  {ex.unilateral && <span style={{fontSize:10,color:'var(--text3)'}}>— poids et reps par côté (G / D)</span>}
-                </div>
-                <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
-                  <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                  <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
+                    <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                  </div>
                 </div>
               </div>
 

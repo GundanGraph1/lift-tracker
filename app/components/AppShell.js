@@ -10,6 +10,7 @@ import JournalPage from './pages/JournalPage'
 import ExplorePage from './pages/ExplorePage'
 import ProfilPage from './pages/ProfilPage'
 import UpdateBanner from './UpdateBanner'
+import MonthlyRecap from './MonthlyRecap'
 
 const NAV = [
   { key: 'saisie',   label: 'Saisie',   icon: (active) => (
@@ -43,11 +44,28 @@ export default function AppShell() {
   const currentUser = useStore(s => s.currentUser)
   const currentPage = useStore(s => s.currentPage)
   const [syncStatus, setSyncStatus] = useState('syncing')
+  const [showRecap, setShowRecap] = useState(false)
   const [syncMsg, setSyncMsg] = useState('Connexion...')
   const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
     if (!currentUser) return
+    // Vérifier si on doit afficher le recap mensuel (1er du mois)
+    const now = new Date()
+    if (now.getDate() === 1) {
+      const recapKey = `recap_seen_${now.getFullYear()}_${now.getMonth() + 1}_${currentUser.id}`
+      if (!localStorage.getItem(recapKey)) {
+        // Vérifier aussi en base
+        db.from('monthly_recap_seen')
+          .select('id').eq('user_id', currentUser.id)
+          .eq('year', now.getFullYear()).eq('month', now.getMonth() + 1)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (!data) setShowRecap(true)
+            else localStorage.setItem(recapKey, '1')
+          })
+      }
+    }
     const savedPage = localStorage.getItem('lt_page')
     if (savedPage && NAV.find(n => n.key === savedPage)) actions.setCurrentPage(savedPage)
     else actions.setCurrentPage('saisie')
@@ -106,6 +124,13 @@ export default function AppShell() {
       } catch(e) {}
     }
     loadAll()
+  }
+
+  function closeRecap() {
+    const now = new Date()
+    const recapKey = `recap_seen_${now.getFullYear()}_${now.getMonth() + 1}_${currentUser.id}`
+    localStorage.setItem(recapKey, '1')
+    setShowRecap(false)
   }
 
   function logout() {
@@ -186,6 +211,7 @@ export default function AppShell() {
         })}
       </nav>
 
+      {showRecap && <MonthlyRecap onClose={closeRecap} />}
       <UpdateBanner />
     </div>
   )

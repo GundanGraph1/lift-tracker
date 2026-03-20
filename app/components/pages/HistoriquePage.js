@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore } from '../../../lib/store'
 import ShareStory from '../ShareStory'
-import { MUSCLE_LABELS, MUSCLE_COLORS, normalize } from '../../../lib/constants'
+import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 export default function HistoriquePage({ onChanged }) {
@@ -143,7 +143,7 @@ export default function HistoriquePage({ onChanged }) {
     return { dir:'eq' }
   }
 
-  const muscles = ['all', ...Object.keys(MUSCLE_LABELS)]
+  const muscles = ['all', ...MUSCLE_GROUPS]
 
   return (
     <div>
@@ -223,7 +223,7 @@ export default function HistoriquePage({ onChanged }) {
               <div>
                 <label className="field-label">Muscle</label>
                 <select value={(editSession.muscle||'').split('+')[0]} onChange={e=>setEditSession(p=>({...p,muscle:e.target.value}))}>
-                  {Object.keys(MUSCLE_LABELS).map(m=><option key={m} value={m}>{MUSCLE_LABELS[m]}</option>)}
+                  {MUSCLE_GROUPS.map(m=><option key={m} value={m}>{MUSCLE_LABELS[m]}</option>)}
                 </select>
               </div>
               <div><label className="field-label">Notes</label><textarea value={editSession.notes||''} onChange={e=>setEditSession(p=>({...p,notes:e.target.value}))} rows={2} style={{resize:'none'}}/></div>

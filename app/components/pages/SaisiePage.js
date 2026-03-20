@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { ALL_EXERCISES, MUSCLE_LABELS, normalize } from '../../../lib/constants'
+import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 
@@ -542,7 +542,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         <div>
           <label className="field-label">Groupe musculaire</label>
           <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
-            {Object.keys(MUSCLE_LABELS).map(m => {
+            {MUSCLE_GROUPS.map(m => {
               const sel = muscles.includes(m)
               return <button key={m} onClick={()=>setMuscles(prev=>sel?prev.filter(x=>x!==m):[...prev,m])} style={{background:sel?'var(--red)':'var(--s2)',border:`1px solid ${sel?'var(--red)':'var(--border)'}`,borderRadius:8,padding:'5px 12px',color:sel?'white':'var(--text2)',cursor:'pointer',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,transition:'all 0.15s'}}>{MUSCLE_LABELS[m]}</button>
             })}

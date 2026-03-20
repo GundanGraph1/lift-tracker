@@ -276,7 +276,13 @@ export default function ProfilPage({ onLogout }) {
                 <label className="field-label">Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 5)</span></label>
                 <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
                   {userBadges.map(b=>{
-                    const badge=BADGES[b.badge_key]; if(!badge) return null
+                    // Support badges mensuels (ex: champion_month_2025_3)
+                    const monthlyKey = b.badge_key?.startsWith('champion_month') ? 'champion_month'
+                      : b.badge_key?.startsWith('podium_month') ? 'podium_month' : null
+                    const badge=BADGES[monthlyKey || b.badge_key]; if(!badge) return null
+                    // Extraire le mois/année pour les badges mensuels
+                    const monthParts = monthlyKey ? b.badge_key.split('_').slice(-2) : null
+                    const badgeLabel = monthParts ? `${['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][parseInt(monthParts[1])-1]} ${monthParts[0]}` : null
                     const isSelected=featuredBadges.includes(b.badge_key)
                     return (
                       <div key={b.badge_key} onClick={()=>{
@@ -291,7 +297,7 @@ export default function ProfilPage({ onLogout }) {
                       }}>
                         <span style={{fontSize:20}}>{badge.icon}</span>
                         <div>
-                          <div style={{fontSize:12,fontWeight:700,color:isSelected?badge.color:'var(--text2)',fontFamily:'var(--fb)'}}>{badge.name}</div>
+                          <div style={{fontSize:12,fontWeight:700,color:isSelected?badge.color:'var(--text2)',fontFamily:'var(--fb)'}}>{badge.name}{badgeLabel ? ` — ${badgeLabel}` : ''}</div>
                           <div style={{fontSize:10,color:'var(--text3)'}}>{badge.desc}</div>
                         </div>
                         {isSelected&&<span style={{fontSize:11,color:badge.color,marginLeft:'auto',fontWeight:700}}>✓</span>}

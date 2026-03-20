@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
 import ShareStory from '../ShareStory'
-import { MUSCLE_LABELS, BADGES, normalize } from '../../../lib/constants'
+import { MUSCLE_LABELS, MUSCLE_GROUPS, BADGES, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 const isBW = (name) => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest')
@@ -113,7 +113,7 @@ export default function FeedPage() {
     return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})
   }
 
-  const filters = ['all',...Object.keys(MUSCLE_LABELS).slice(0,6)]
+  const filters = ['all',...MUSCLE_GROUPS.slice(0,6)]
 
   return (
     <>

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, normalize } from '../../../lib/constants'
+import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, MUSCLE_SHORTCUTS, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 
@@ -533,6 +533,18 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       {(
         <div>
           <label className="field-label">Groupe musculaire</label>
+          {/* Raccourcis rapides */}
+          <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
+            {MUSCLE_SHORTCUTS.map(s => (
+              <button key={s.key} onClick={()=>setMuscles(s.muscles)} style={{
+                padding:'4px 10px',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',
+                borderRadius:8,border:'1px solid var(--border2)',
+                background:JSON.stringify([...s.muscles].sort())===JSON.stringify([...muscles].sort())?'var(--red)':'var(--s3)',
+                color:JSON.stringify([...s.muscles].sort())===JSON.stringify([...muscles].sort())?'white':'var(--text3)',
+                transition:'all .15s',
+              }}>{s.label}</button>
+            ))}
+          </div>
           <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
             {MUSCLE_GROUPS.map(m => {
               const sel = muscles.includes(m)
@@ -646,7 +658,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                               }}/>
                           </>)
                         })()}
-                      <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
+                      <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((ex.unilateral?((parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0)):(parseFloat(st.r)||0)*(parseFloat(st.w)||0))).toLocaleString('fr')}</span>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
                     </div>
                   </div>

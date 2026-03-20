@@ -209,7 +209,7 @@ export default function HistoriquePage({ onChanged }) {
             <div style={{padding:'10px 14px'}}>
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
                 {(s.exercises||[]).map((e,i) => {
-                  const maxW = e.sets.length?Math.max(...e.sets.map(st=>parseFloat(st.w)||0)):0
+                  const maxW = e.sets.length?Math.max(...e.sets.map(st=>e.unilateral?(Math.max(parseFloat(st.wL)||0,parseFloat(st.wR)||0)):(parseFloat(st.w)||0))):0
                   return <div key={i} style={{background:'var(--s3)',borderRadius:8,padding:'4px 10px',fontSize:12,color:'var(--text2)'}}>{e.name} <span style={{color:'var(--text)',fontWeight:600}}>{maxW}kg</span></div>
                 })}
               </div>

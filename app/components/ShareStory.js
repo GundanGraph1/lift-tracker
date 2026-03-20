@@ -79,14 +79,14 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     await new Promise(resolve => {
       logoImg.onload = () => {
         const tmpC = document.createElement('canvas')
-        const logoW = 620, logoH = Math.round(620 * 115.3 / 391.99)
+        const logoW = 420, logoH = Math.round(420 * 115.3 / 391.99)
         tmpC.width = logoW; tmpC.height = logoH
         const tmpCtx = tmpC.getContext('2d')
         tmpCtx.drawImage(logoImg, 0, 0, logoW, logoH)
         tmpCtx.globalCompositeOperation = 'source-in'
         tmpCtx.fillStyle = muscleCol
         tmpCtx.fillRect(0, 0, logoW, logoH)
-        ctx.drawImage(tmpC, M, 80)
+        ctx.drawImage(tmpC, M, 100)
         resolve()
       }
       logoImg.onerror = () => {
@@ -101,12 +101,12 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
     ctx.font = '500 36px "Barlow", sans-serif'
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText(dateStr.toUpperCase(), M, 270)
+    ctx.fillText(dateStr.toUpperCase(), M, 255)
 
     // Divider
     ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.5)`
     ctx.lineWidth = 2
-    ctx.beginPath(); ctx.moveTo(M, 300); ctx.lineTo(W-M, 300); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(M, 285); ctx.lineTo(W-M, 285); ctx.stroke()
 
     // ── MUSCLE BADGE (y: 320) ──
     const badgeText = muscles.join(' + ').toUpperCase()
@@ -281,6 +281,26 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillStyle = 'rgba(255,255,255,0.35)'
       ctx.fillText('grindset.app', avCX + 72, footerY + 105)
     }
+
+    // ── LOGO SEUL en bas à droite ──
+    const logoSeulData = "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20331.8%20383.5%22%3E%3Cg%20fill%3D%22white%22%3E%3Cpath%20d%3D%22M217.25%2C267.27h-38.46c-6.55%2C0-12.34%2C4.48-13.76%2C10.87-4.97%2C22.39-24.98%2C39.17-48.82%2C39.17s-44.66-17.47-49.11-40.54c-1.05-5.46-5.67-9.5-11.23-9.5H12.05c-6.81%2C0-12.1%2C5.93-11.36%2C12.69%2C6.32%2C58.23%2C55.63%2C103.54%2C115.52%2C103.54s107.09-43.4%2C115.05-99.84c1.22-8.63-5.3-16.39-14.01-16.39Z%22/%3E%3Cpath%20d%3D%22M250.96%2C34.86H116.2C49.3%2C34.86-4.4%2C91.4.29%2C159.3c3.95%2C57.3%2C50.38%2C103.72%2C107.67%2C107.67%2C67.9%2C4.68%2C124.44-49.02%2C124.44-115.92v-.14c0-7.26-5.89-13.14-13.14-13.14h-39.67c-7.28%2C0-13.41%2C5.81-13.38%2C13.1%2C0%2C1.1-.03%2C2.21-.1%2C3.33-1.45%2C23.42-19.51%2C43.1-42.74%2C46.35-31.89%2C4.46-59.14-21.4-57.06-52.88%2C1.7-25.7%2C25.42-46.64%2C51.18-46.64h133.47c10.06%2C0%2C18.21-8.15%2C18.21-18.21v-29.77c0-10.06-8.15-18.21-18.21-18.21Z%22/%3E%3Cpath%20d%3D%22M313.05%2C0c-10.35%2C0-18.71%2C8.4-18.71%2C18.74s8.37%2C18.74%2C18.71%2C18.74%2C18.74-8.4%2C18.74-18.74S323.4%2C0%2C313.05%2C0ZM313.05%2C33.08c-7.89%2C0-14.31-6.42-14.31-14.34s6.42-14.31%2C14.31-14.31%2C14.34%2C6.42%2C14.34%2C14.31-6.42%2C14.34-14.34%2C14.34Z%22/%3E%3Cpath%20d%3D%22M322.82%2C20.72c-.23%2C1.82-1.1%2C3.27-2.25%2C4.58-2.8%2C3.19-7.21%2C4.22-11.14%2C2.6-3.05-1.25-5.26-3.82-5.94-7.01-1.21-5.75%2C2.57-11.21%2C8.4-11.98%2C5.04-.67%2C9.81%2C2.62%2C10.96%2C7.63h-4.63c-1.13-2.49-3.74-3.75-6.27-3.17-2.51.57-4.34%2C2.87-4.29%2C5.43.05%2C2.62%2C1.88%2C4.86%2C4.42%2C5.33%2C2.59.48%2C5.17-.76%2C6.22-3.38l4.52-.03Z%22/%3E%3C/g%3E%3C/svg%3E"
+    const logoSeulImg = new Image()
+    logoSeulImg.src = logoSeulData
+    await new Promise(resolve => {
+      logoSeulImg.onload = () => {
+        const lsW = 72, lsH = Math.round(72 * 383.5 / 331.8)
+        const tmpLS = document.createElement('canvas')
+        tmpLS.width = lsW; tmpLS.height = lsH
+        const tmpLSCtx = tmpLS.getContext('2d')
+        tmpLSCtx.drawImage(logoSeulImg, 0, 0, lsW, lsH)
+        tmpLSCtx.globalCompositeOperation = 'source-in'
+        tmpLSCtx.fillStyle = 'rgba(255,255,255,0.3)'
+        tmpLSCtx.fillRect(0, 0, lsW, lsH)
+        ctx.drawImage(tmpLS, W - M - lsW, H - M - lsH - 20)
+        resolve()
+      }
+      logoSeulImg.onerror = () => resolve()
+    })
 
     drawAvatar()
     if (!user?.avatar?.startsWith('http')) {

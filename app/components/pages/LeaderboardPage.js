@@ -34,19 +34,32 @@ export default function LeaderboardPage() {
 
   function Row({user,rank,value,detail,color}) {
     const medals = ['🥇','🥈','🥉']
+    const medalColors = ['#fbbf24','#94a3b8','#cd7c2e']
     const genderIcon = user.gender === 'female' ? '♀' : user.gender === 'other' ? '·' : '♂'
+    const isTop3 = rank < 3
     return (
-      <div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
-        <div style={{width:28,textAlign:'center',fontSize:rank<3?20:14,color:rank>=3?'var(--text3)':'inherit'}}>{rank<3?medals[rank]:rank+1}</div>
-        <Avatar user={user}/>
-        <div style={{flex:1}}>
-          <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:4}}>
-            {user.username}
-            {genderFilter==='all'&&<span style={{fontSize:11,opacity:0.5}}>{genderIcon}</span>}
-          </div>
-          <div style={{fontSize:11,color:'var(--text3)'}}>{detail}</div>
+      <div style={{
+        display:'flex',alignItems:'center',gap:12,
+        padding: isTop3 ? '14px 16px' : '11px 14px',
+        borderBottom:'1px solid var(--border)',
+        background: rank===0 ? 'linear-gradient(90deg,rgba(251,191,36,.08),transparent)' : rank===1 ? 'linear-gradient(90deg,rgba(148,163,184,.05),transparent)' : rank===2 ? 'linear-gradient(90deg,rgba(205,124,46,.05),transparent)' : 'transparent',
+        transition:'background .2s',
+      }}>
+        <div style={{width:28,textAlign:'center',flexShrink:0}}>
+          {isTop3
+            ? <div style={{fontSize:20,filter:rank===0?'drop-shadow(0 0 6px rgba(251,191,36,.6))':rank===1?'drop-shadow(0 0 4px rgba(148,163,184,.4))':'drop-shadow(0 0 4px rgba(205,124,46,.4))'}}>{medals[rank]}</div>
+            : <div style={{fontSize:13,fontWeight:700,color:'var(--text3)',fontFamily:'var(--fm)'}}>{rank+1}</div>
+          }
         </div>
-        <div style={{fontFamily:'var(--fm)',fontSize:20,fontWeight:700,color:color||'var(--text)'}}>{value}</div>
+        <Avatar user={user} size={isTop3?42:36}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontWeight:700,fontSize:isTop3?15:13,display:'flex',alignItems:'center',gap:4,color:rank===0?'#fbbf24':rank===1?'#e2e8f0':rank===2?'#cd7c2e':'var(--text)'}}>
+            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{user.username}</span>
+            {genderFilter==='all'&&<span style={{fontSize:10,opacity:0.4,flexShrink:0}}>{genderIcon}</span>}
+          </div>
+          <div style={{fontSize:11,color:'var(--text3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{detail}</div>
+        </div>
+        <div style={{fontFamily:'var(--fm)',fontSize:isTop3?22:18,fontWeight:800,color:isTop3?medalColors[rank]:(color||'var(--text)'),flexShrink:0,textShadow:rank===0?'0 0 12px rgba(251,191,36,.4)':'none'}}>{value}</div>
       </div>
     )
   }

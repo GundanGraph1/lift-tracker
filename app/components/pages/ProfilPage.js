@@ -164,7 +164,7 @@ export default function ProfilPage({ onLogout }) {
           <div>
             <label className="field-label">Genre</label>
             <div style={{display:'flex',gap:8}}>
-              {[{v:'male',l:'♂ Homme'},{v:'female',l:'♀ Femme'},{v:'other',l:'· Autre'}].map(g=>(
+              {[{v:'male',l:'♂ Homme'},{v:'female',l:'♀ Femme'}].map(g=>(
                 <button key={g.v} onClick={()=>setGender(g.v)} style={{flex:1,padding:'8px 6px',fontSize:13,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:10,border:`1px solid ${gender===g.v?'var(--red)':'var(--border)'}`,background:gender===g.v?'var(--red)':'var(--s3)',color:gender===g.v?'white':'var(--text2)',transition:'all .15s'}}>{g.l}</button>
               ))}
             </div>

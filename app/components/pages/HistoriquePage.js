@@ -76,7 +76,7 @@ export default function HistoriquePage({ onChanged }) {
     setSaving(true)
     const totalVolume = editSession.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>{
       if (e.unilateral) return b+(parseFloat(st.rL)||0)*(parseFloat(st.wL)||0)+(parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
-      return b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0)
+      return b+(e.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0))
     },0),0)
     const { error } = await db.from('sessions').update({
       session_date: editSession.session_date,

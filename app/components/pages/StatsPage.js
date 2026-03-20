@@ -103,7 +103,7 @@ export default function StatsPage() {
     const sorted = [...sessions].sort((a,b)=>a.session_date.localeCompare(b.session_date))
     for (const s of sorted) {
       if (!(s.muscle||'').split('+').includes(muscle)) continue
-      const vol = (s.exercises||[]).reduce((a,ex)=>a+ex.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0),0)
+      const vol = (s.exercises||[]).reduce((a,ex)=>a+ex.sets.reduce((b,st)=>b+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0),0)
       if (vol > 0) pts.push({ date: s.session_date, w: vol })
     }
     return pts
@@ -114,7 +114,7 @@ export default function StatsPage() {
     for (const s of [...sessions].reverse()) {
       const ex = (s.exercises||[]).find(e=>normalize(e.name)===normalize(name))
       if (ex && ex.sets.length) {
-        const maxW = Math.max(...ex.sets.map(st=>parseFloat(st.w)||0))
+        const maxW = Math.max(...ex.sets.map(st=>(ex.unilateral?Math.max(parseFloat(st.wL||st.w)||0,parseFloat(st.wR||st.w)||0):(parseFloat(st.w)||0))))
         pts.push({ date: s.session_date, w: maxW })
       }
     }

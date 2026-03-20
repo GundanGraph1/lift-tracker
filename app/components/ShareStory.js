@@ -19,8 +19,8 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   const storyColor = customColor || themeAccent
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
-    .sort((a,b) => b.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0) - a.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0))
-  const totalVol = exercises.reduce((a,ex) => a+ex.sets.reduce((b,st)=>b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0), 0)
+    .sort((a,b) => b.sets.reduce((s,st)=>s+(b.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0) - a.sets.reduce((s,st)=>s+(a.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0))
+  const totalVol = exercises.reduce((a,ex) => a+ex.sets.reduce((b,st)=>b+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0), 0)
   const totalSets = (session.exercises||[]).reduce((a,ex)=>a+ex.sets.length,0)
   const sessionPRs = prs.filter(p => p.date === session.session_date && !p.is_manual)
 
@@ -156,8 +156,8 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const exCardH = Math.max(80, Math.min(118, Math.floor(availH / Math.max(maxExos, 1)) - 12))
     allExos.forEach((ex, i) => {
       const y = curY + i * (exCardH + 12)
-      const exVol = ex.sets.reduce((a,st)=>a+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0)
-      const bestSet = ex.sets.reduce((best,st) => (parseFloat(st.w)||0) > (parseFloat(best.w)||0) ? st : best, ex.sets[0]||{r:0,w:0})
+      const exVol = ex.sets.reduce((a,st)=>a+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0)
+      const bestSet = ex.sets.reduce((best,st) => (Math.max(parseFloat(st.wL||st.w)||0,parseFloat(st.wR||st.w)||0)) > (Math.max(parseFloat(best.wL||best.w)||0,parseFloat(best.wR||best.w)||0)) ? st : best, ex.sets[0]||{r:0,w:0})
 
       roundRect(ctx, M, y, CONTENT_W, exCardH, 16)
       ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill()

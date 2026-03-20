@@ -227,7 +227,7 @@ export default function EditProfile({ onClose, onLogout }) {
               <div>
                 <label className="field-label">Genre</label>
                 <div style={{display:'flex',gap:8,marginTop:4}}>
-                  {[{val:'male',label:'♂ Homme'},{val:'female',label:'♀ Femme'},{val:'other',label:'· Autre'}].map(g=>(
+                  {[{val:'male',label:'♂ Homme'},{val:'female',label:'♀ Femme'}].map(g=>(
                     <button key={g.val} onClick={()=>setGender(g.val)} style={{flex:1,padding:'8px 6px',borderRadius:10,border:`1px solid ${gender===g.val?'var(--red)':'var(--border)'}`,background:gender===g.val?'rgba(255,60,60,0.1)':'var(--s2)',color:gender===g.val?'var(--red)':'var(--text2)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',transition:'all .15s'}}>{g.label}</button>
                   ))}
                 </div>

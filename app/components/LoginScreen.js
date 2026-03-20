@@ -161,7 +161,7 @@ export default function LoginScreen() {
           <div>
             <label className="field-label">Genre (pour les badges et classements)</label>
             <div style={{display:'flex',gap:8,marginTop:6}}>
-              {[{v:'male',l:'♂ Homme'},{v:'female',l:'♀ Femme'},{v:'other',l:'· Autre'}].map(g=>(
+              {[{v:'male',l:'♂ Homme'},{v:'female',l:'♀ Femme'}].map(g=>(
                 <button key={g.v} onClick={()=>setNewGender(g.v)} style={{flex:1,padding:'8px 4px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:10,border:`1px solid ${newGender===g.v?'var(--red)':'var(--border)'}`,background:newGender===g.v?'var(--red)':'var(--s2)',color:newGender===g.v?'white':'var(--text2)',transition:'all .15s'}}>{g.l}</button>
               ))}
             </div>

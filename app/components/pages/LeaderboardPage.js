@@ -158,6 +158,18 @@ export default function LeaderboardPage() {
         return {user:u,val:best,detail:`${bestReps} rep${bestReps>1?'s':''} — le ${dateStr}`,color:colors[tab],display:`${best} kg`}
       }).filter(Boolean).sort((a,b)=>b.val-a.val)
     }
+    if (tab==='best') {
+      // Meilleur volume sur une seule séance (all time, pas filtré par période)
+      const { sessions: allSess2 } = data
+      return filteredUsers.map(u=>{
+        const us=allSess2.filter(s=>s.user_id===u.id)
+        if(!us.length) return null
+        const best=us.reduce((a,s)=>((s.total_volume||0)>(a.total_volume||0)?s:a),us[0])
+        const dateStr=new Date(best.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'})
+        const muscleLabel=(best.muscle||'').split('+').map(m=>MUSCLE_LABELS[m]||m).join('+').slice(0,14)
+        return {user:u,val:best.total_volume||0,detail:`${muscleLabel} — ${dateStr}`,color:'var(--gold)',display:`${(best.total_volume||0).toLocaleString('fr')} kg`}
+      }).filter(Boolean).sort((a,b)=>b.val-a.val)
+    }
     if (tab==='sessions') {
       return filteredUsers.map(u=>{
         const us=sessions.filter(s=>s.user_id===u.id)
@@ -183,6 +195,7 @@ export default function LeaderboardPage() {
 
   const tabs = [
     {k:'volume',  l:'Volume',    group:'muscu'},
+    {k:'best',    l:'Best Séance',group:'muscu'},
     {k:'sessions',l:'Séances',   group:'muscu'},
     {k:'bench',   l:'🏋️ Bench',  group:'pr'},
     {k:'squat',   l:'🦵 Squat',  group:'pr'},

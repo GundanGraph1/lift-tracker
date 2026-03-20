@@ -24,7 +24,7 @@ const NAV = [
       <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
     </svg>
   )},
-  { key: 'explore',  label: 'Explorer', icon: (active) => (
+  { key: 'explore',  label: 'Explore', icon: (active) => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active?2.5:2} strokeLinecap="round" strokeLinejoin="round">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
     </svg>
@@ -127,7 +127,7 @@ export default function AppShell() {
       {/* Header — logo seulement */}
       <div className="app-header">
         <div className="header-logo">
-          <LogoIcon size={52} />
+          <LogoIcon size={28} />
         </div>
         {/* Sync status discret */}
         <div className="sync-bar" style={{margin:0}}>

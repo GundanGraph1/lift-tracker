@@ -101,7 +101,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
     ctx.font = '500 36px "Barlow", sans-serif'
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText(dateStr.toUpperCase(), M, 255)
+    ctx.fillText(dateStr.toUpperCase(), M + 89, 255)
 
     // Divider
     ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.5)`
@@ -288,13 +288,13 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     logoSeulImg.src = logoSeulData
     await new Promise(resolve => {
       logoSeulImg.onload = () => {
-        const lsW = 72, lsH = Math.round(72 * 383.5 / 331.8)
+        const lsW = 100, lsH = Math.round(100 * 383.5 / 331.8)
         const tmpLS = document.createElement('canvas')
         tmpLS.width = lsW; tmpLS.height = lsH
         const tmpLSCtx = tmpLS.getContext('2d')
         tmpLSCtx.drawImage(logoSeulImg, 0, 0, lsW, lsH)
         tmpLSCtx.globalCompositeOperation = 'source-in'
-        tmpLSCtx.fillStyle = 'rgba(255,255,255,0.3)'
+        tmpLSCtx.fillStyle = muscleCol
         tmpLSCtx.fillRect(0, 0, lsW, lsH)
         ctx.drawImage(tmpLS, W - M - lsW, H - M - lsH - 20)
         resolve()

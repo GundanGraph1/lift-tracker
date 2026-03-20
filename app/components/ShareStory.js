@@ -9,13 +9,14 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [customColor, setCustomColor] = useState(null)
 
   const muscles = (session.muscle||'').split('+').map(m => MUSCLE_LABELS[m]||m)
   const muscleColor = MUSCLE_COLORS[(session.muscle||'').split('+')[0]] || '#ff3c3c'
   // Use user's theme accent color if set, otherwise fallback to muscle color
   const { themeKey } = getThemeFromUser(user)
   const themeAccent = THEMES.find(t=>t.key===themeKey)?.preview || muscleColor
-  const storyColor = themeAccent
+  const storyColor = customColor || themeAccent
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
     .sort((a,b) => b.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0) - a.sets.reduce((s,st)=>s+(parseFloat(st.r)||0)*(parseFloat(st.w)||0),0))
@@ -26,12 +27,12 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+    setReady(false)
     const ctx = canvas.getContext('2d')
-    // Story format 1080x1920
     canvas.width = 1080
     canvas.height = 1920
     draw(ctx, canvas)
-  }, [])
+  }, [customColor])
 
   function hex2rgb(hex) {
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
@@ -257,7 +258,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillText(user?.username||'', avCX + 72, footerY + 62)
       ctx.font = '500 30px "Barlow", sans-serif'
       ctx.fillStyle = 'rgba(255,255,255,0.35)'
-      ctx.fillText('lift-tracker-two.vercel.app', avCX + 72, footerY + 105)
+      ctx.fillText('grindset.app', avCX + 72, footerY + 105)
     }
 
     drawAvatar()
@@ -353,6 +354,38 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
         }}>
           <canvas ref={canvasRef} style={{width:'100%', height:'100%', objectFit:'contain'}} />
           {!ready && <div style={{position:'absolute', fontSize:12, color:'var(--text3)'}}>Génération...</div>}
+        </div>
+
+        {/* Sélecteur de couleur */}
+        <div>
+          <div style={{fontSize:11,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>Couleur de la story</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {[
+              {c:null,    l:'Thème'},
+              {c:'#ff073b',l:'Rouge'},
+              {c:'#3b82f6',l:'Bleu'},
+              {c:'#22c55e',l:'Vert'},
+              {c:'#f97316',l:'Orange'},
+              {c:'#a855f7',l:'Violet'},
+              {c:'#fbbf24',l:'Or'},
+              {c:'#ec4899',l:'Rose'},
+              {c:'#14b8a6',l:'Teal'},
+            ].map(({c,l})=>{
+              const active = customColor === c
+              const preview = c || themeAccent
+              return (
+                <button key={l} onClick={()=>setCustomColor(c)} style={{
+                  display:'flex',flexDirection:'column',alignItems:'center',gap:4,
+                  padding:'6px 8px',borderRadius:10,border:`2px solid ${active?preview:'var(--border)'}`,
+                  background:active?`${preview}15`:'var(--s2)',cursor:'pointer',
+                  transition:'all .15s',minWidth:44,
+                }}>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:preview,boxShadow:active?`0 0 6px ${preview}60`:'none'}}/>
+                  <span style={{fontSize:9,fontWeight:700,color:active?preview:'var(--text3)'}}>{l}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <button className="btn-primary" onClick={share} disabled={!ready||downloading}>

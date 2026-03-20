@@ -633,8 +633,27 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                   <div key={st.id} style={{marginBottom:4}}>
                     <div style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:2,alignItems:'center'}}>
                       <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
-                      <input type="number" value={st.r} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'8px 4px',fontSize:14}}/>
-                      <input type="number" value={st.w} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)} placeholder={isBW(ex.name)?"Lest":"0"} min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'8px 4px',fontSize:14,borderColor:isBW(ex.name)&&!st.w?'var(--blue)':''}}/>
+                      {(() => {
+                          const last = getLastPerf(ex.name)
+                          const lastSet = last?.exercise?.sets?.[si]
+                          const prevR = lastSet?.r ? String(lastSet.r) : ''
+                          const prevW = lastSet?.w ? String(lastSet.w) : ''
+                          const isEmpty = !st.r && !st.w
+                          return (<>
+                            <input type="number" value={st.r||''} onChange={e=>updateSet(ex.id,st.id,'r',e.target.value)}
+                              placeholder={prevR||'0'} min="0" inputMode="numeric"
+                              style={{textAlign:'center',padding:'8px 4px',fontSize:14,
+                                opacity: isEmpty&&prevR ? 0.95 : 1,
+                                borderColor: isEmpty&&prevR ? 'var(--border2)' : ''
+                              }}/>
+                            <input type="number" value={st.w||''} onChange={e=>updateSet(ex.id,st.id,'w',e.target.value)}
+                              placeholder={isBW(ex.name)?'Lest':(prevW||'0')} min="0" step="0.5" inputMode="decimal"
+                              style={{textAlign:'center',padding:'8px 4px',fontSize:14,
+                                borderColor: isBW(ex.name)&&!st.w?'var(--blue)': isEmpty&&prevW?'var(--border2)':'',
+                                opacity: isEmpty&&prevW ? 0.95 : 1,
+                              }}/>
+                          </>)
+                        })()}
                       <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
                     </div>

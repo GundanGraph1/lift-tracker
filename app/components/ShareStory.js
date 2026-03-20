@@ -79,7 +79,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     await new Promise(resolve => {
       logoImg.onload = () => {
         const tmpC = document.createElement('canvas')
-        const logoW = 420, logoH = Math.round(420 * 115.3 / 391.99)
+        const logoW = 520, logoH = Math.round(520 * 115.3 / 391.99)
         tmpC.width = logoW; tmpC.height = logoH
         const tmpCtx = tmpC.getContext('2d')
         tmpCtx.drawImage(logoImg, 0, 0, logoW, logoH)
@@ -101,7 +101,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
     ctx.font = '500 36px "Barlow", sans-serif'
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText(dateStr.toUpperCase(), M + 89, 255)
+    ctx.fillText(dateStr.toUpperCase(), M + 110, 248, 520 - 110)
 
     // Divider
     ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.5)`

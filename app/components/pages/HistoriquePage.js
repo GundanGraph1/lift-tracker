@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore } from '../../../lib/store'
 import ShareStory from '../ShareStory'
-import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, normalize } from '../../../lib/constants'
+import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 export default function HistoriquePage({ onChanged }) {
@@ -16,7 +16,20 @@ export default function HistoriquePage({ onChanged }) {
   const [shareSession, setShareSession] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  const filtered = filterMuscle==='all' ? sessions : sessions.filter(s=>(s.muscle||'').split('+').includes(filterMuscle))
+  // Mapping alias → groupes canoniques pour le filtre
+  const MUSCLE_ALIASES = {
+    Biceps: ['Biceps','BrasBi','Bras'],
+    Triceps: ['Triceps','BrasTri','Bras'],
+    Pectoraux: ['Pectoraux','Pec'],
+    Épaules: ['Épaules','Epaule','Épaule'],
+    Jambes: ['Jambes','Quad','Ischio','Quadriceps'],
+    Abdominaux: ['Abdominaux','Abdos'],
+  }
+  const filtered = filterMuscle==='all' ? sessions : sessions.filter(s => {
+    const muscles = (s.muscle||'').split('+')
+    const aliases = MUSCLE_ALIASES[filterMuscle] || [filterMuscle]
+    return muscles.some(m => aliases.includes(m) || m === filterMuscle)
+  })
 
   async function deleteSession(id) {
     if (!confirm('Supprimer cette séance ?')) return

@@ -91,7 +91,28 @@ export default function FeedPage() {
     }
   }
 
-  if (loading) return <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>⏳ Chargement...</div>
+  if (loading) return (
+    <div>
+      <div style={{marginBottom:20}}>
+        <div className="page-title">FEED</div>
+        <div className="page-sub">Activité de la communauté</div>
+        <hr className="page-divider" />
+      </div>
+      {[1,2,3].map(i=>(
+        <div key={i} style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:12}}>
+          <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:12}}>
+            <div style={{width:42,height:42,borderRadius:'50%',background:'var(--s3)',flexShrink:0,animation:'pulse 1.5s ease-in-out infinite'}}/>
+            <div style={{flex:1,display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{height:13,borderRadius:6,background:'var(--s3)',width:'40%',animation:'pulse 1.5s ease-in-out infinite'}}/>
+              <div style={{height:10,borderRadius:6,background:'var(--s3)',width:'25%',animation:'pulse 1.5s ease-in-out infinite'}}/>
+            </div>
+          </div>
+          <div style={{height:10,borderRadius:6,background:'var(--s3)',width:'70%',marginBottom:8,animation:'pulse 1.5s ease-in-out infinite'}}/>
+          <div style={{height:10,borderRadius:6,background:'var(--s3)',width:'50%',animation:'pulse 1.5s ease-in-out infinite'}}/>
+        </div>
+      ))}
+    </div>
+  )
   if (!items) return <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>⚠️ Erreur de chargement</div>
 
   const { sessions, users, reactions, badges, badgeEvents } = items
@@ -130,7 +151,19 @@ export default function FeedPage() {
       </div>
 
       {(() => {
-        const filteredSessions = filter==='all' ? sessions : sessions.filter(s=>(s.muscle||'').split('+').includes(filter))
+        const FEED_ALIASES = {
+          Biceps: ['Biceps','BrasBi','Bras'],
+          Triceps: ['Triceps','BrasTri','Bras'],
+          Pectoraux: ['Pectoraux','Pec'],
+          Épaules: ['Épaules','Epaule','Épaule'],
+          Jambes: ['Jambes','Quad','Ischio','Quadriceps'],
+          Abdominaux: ['Abdominaux','Abdos'],
+        }
+        const filteredSessions = filter==='all' ? sessions : sessions.filter(s => {
+          const muscles = (s.muscle||'').split('+')
+          const aliases = FEED_ALIASES[filter] || [filter]
+          return muscles.some(m => aliases.includes(m) || m === filter)
+        })
         const allItems = [
           ...filteredSessions.map(s => ({...s, _type:'session', _sortDate: s.created_at || s.session_date})),
           ...badgeEvents.map(b => ({...b, _type:'badge', _sortDate: b.unlocked_at}))

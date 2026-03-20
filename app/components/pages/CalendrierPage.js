@@ -94,23 +94,36 @@ export default function CalendrierPage() {
           const color=hasSession?(MUSCLE_COLORS[(daySessions[0].muscle||'').split('+')[0]]||'var(--red)'):null
           return (
             <div key={day} onClick={()=>hasSession?setSelected(isSelected?null:day):null} style={{
-              aspectRatio:'1',borderRadius:10,display:'flex',flexDirection:'column',
-              alignItems:'center',justifyContent:'center',
+              aspectRatio:'1',borderRadius:8,display:'flex',flexDirection:'column',
+              alignItems:'center',justifyContent:'center',gap:1,
               cursor:hasSession?'pointer':'default',
-              background:isSelected?color||'var(--red)':hasSession?`${color}25`:'transparent',
-              border:`1.5px solid ${isSelected?(color||'var(--red)'):isToday?'var(--red)':hasSession?(color+'44'||'var(--border)'):'transparent'}`,
-              transition:'all .15s',
-              position:'relative',
+              background:isSelected?(color||'var(--red)'):hasSession?`${color}30`:'transparent',
+              border:`1.5px solid ${isSelected?(color||'var(--red)'):isToday?'var(--red)':hasSession?(color||'transparent'):'transparent'}`,
+              transition:'all .15s',overflow:'hidden',padding:2,
             }}>
               <span style={{
-                fontSize:13,fontWeight:hasSession||isToday?700:400,lineHeight:1,
+                fontSize:12,fontWeight:hasSession||isToday?700:400,lineHeight:1,
                 color:isSelected?'white':isToday?'var(--red)':hasSession?(color||'var(--text)'):'var(--text3)',
               }}>{day}</span>
               {hasSession && (
-                <div style={{display:'flex',gap:2,marginTop:3,flexWrap:'wrap',justifyContent:'center',maxWidth:'90%'}}>
-                  {daySessions.slice(0,3).map((_,si)=>(
-                    <div key={si} style={{width:4,height:4,borderRadius:'50%',background:isSelected?'rgba(255,255,255,0.7)':color||'var(--red)',flexShrink:0}}/>
-                  ))}
+                <span style={{
+                  fontSize:6,fontWeight:800,lineHeight:1,letterSpacing:0.2,
+                  color:isSelected?'rgba(255,255,255,0.9)':(color||'var(--red)'),
+                  textAlign:'center',maxWidth:'100%',overflow:'hidden',
+                  textOverflow:'ellipsis',whiteSpace:'nowrap',padding:'0 1px',
+                }}>
+                  {daySessions.length > 1
+                    ? `${daySessions.length}×`
+                    : (MUSCLE_LABELS[(daySessions[0].muscle||'').split('+')[0]] || (daySessions[0].muscle||'').split('+')[0] || '').slice(0,5)
+                  }
+                </span>
+              )}
+              {hasSession && daySessions.length > 1 && (
+                <div style={{display:'flex',gap:1.5,justifyContent:'center'}}>
+                  {daySessions.slice(0,3).map((ds,si)=>{
+                    const dc=MUSCLE_COLORS[(ds.muscle||'').split('+')[0]]||color
+                    return <div key={si} style={{width:3,height:3,borderRadius:'50%',background:isSelected?'rgba(255,255,255,0.7)':dc,flexShrink:0}}/>
+                  })}
                 </div>
               )}
             </div>

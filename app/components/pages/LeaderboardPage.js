@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { db } from '../../../lib/supabase'
-import { normalize } from '../../../lib/constants'
+import { normalize, MUSCLE_LABELS } from '../../../lib/constants'
 
 export default function LeaderboardPage() {
   const [tab, setTab] = useState('volume')

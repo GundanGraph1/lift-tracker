@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { MUSCLE_COLORS, BADGES, normalize } from '../../../lib/constants'
+import { MUSCLE_COLORS, getMuscleColor, getMuscleLabel, BADGES, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 export default function StatsPage() {
@@ -186,7 +186,12 @@ export default function StatsPage() {
           <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>🏆 Mes PRs</div>
           <button onClick={()=>setShowPRModal(true)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>+ Ajouter</button>
         </div>
-        {sortedPRs.length===0 && <div style={{fontSize:13,color:'var(--text3)'}}>Aucun PR enregistré</div>}
+        {sortedPRs.length===0 && (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'32px 20px',gap:8}}>
+            <div style={{fontSize:36,opacity:0.15}}>🏆</div>
+            <div style={{fontSize:13,color:'var(--text3)',textAlign:'center'}}>Aucun PR — valide une séance pour en créer</div>
+          </div>
+        )}
         {sortedPRs.map(p=>{
           const isPriority=priority.some(x=>normalize(x)===normalize(p.exercise))
           const dateStr=p.date?new Date(p.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}):''

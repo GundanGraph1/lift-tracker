@@ -59,7 +59,7 @@ export default function ThemePicker({ onClose }) {
 
         {/* Preview card */}
         <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 20, textAlign: 'center' }}>
-          <div style={{ fontFamily: 'var(--fm)', fontSize: 32, fontWeight: 800, color: 'var(--red)', letterSpacing: 2, textTransform: 'uppercase' }}>LIFT TRACKER</div>
+          <div style={{ fontFamily: 'var(--fm)', fontSize: 32, fontWeight: 800, color: 'var(--red)', letterSpacing: 2, textTransform: 'uppercase' }}>GRINDSET</div>
           <div style={{ fontFamily: 'var(--fb)', fontSize: 13, color: 'var(--text2)', marginTop: 4 }}>{currentTheme.name} · {currentFont.name}</div>
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
             {['Dos','Pec','Quad'].map(m => (

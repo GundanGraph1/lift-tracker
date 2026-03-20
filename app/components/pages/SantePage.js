@@ -146,7 +146,7 @@ function WeightChart({ logs, goalCfg }) {
   )
 }
 
-export default function SantePage() {
+export default function SantePage({ embedded = false }) {
   const currentUser = useStore(s => s.currentUser)
   const cardioSessions = useStore(s => s.cardioSessions || [])
   const {

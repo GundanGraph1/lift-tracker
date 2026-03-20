@@ -73,7 +73,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     ctx.font = '900 88px "Barlow Condensed", sans-serif'
     ctx.fillStyle = muscleCol
     ctx.textAlign = 'left'
-    ctx.fillText('LIFT TRACKER', M, 210)
+    ctx.fillText('GRINDSET', M, 210)
 
     // Date
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
@@ -308,7 +308,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
           try {
             await navigator.share({
               files: [file],
-              title: 'Ma séance Lift Tracker',
+              title: 'Ma séance Grindset',
             })
             setDownloading(false)
             return

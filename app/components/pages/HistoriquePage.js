@@ -159,7 +159,13 @@ export default function HistoriquePage({ onChanged }) {
         ))}
       </div>
 
-      {filtered.length === 0 && <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}>Aucune séance</div>}
+      {filtered.length === 0 && (
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'60px 20px',gap:12}}>
+          <div style={{fontSize:48,opacity:0.15}}>💪</div>
+          <div style={{fontFamily:'var(--fm)',fontSize:22,fontWeight:800,letterSpacing:2,color:'var(--text3)',textTransform:'uppercase'}}>Aucune séance</div>
+          <div style={{fontSize:13,color:'var(--text3)',opacity:0.6,textAlign:'center'}}>Tes séances apparaîtront ici</div>
+        </div>
+      )}
 
       {filtered.map((s,idx) => {
         const arrow = getArrow(s, idx)

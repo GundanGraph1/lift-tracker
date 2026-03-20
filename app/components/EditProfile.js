@@ -407,7 +407,7 @@ export default function EditProfile({ onClose, onLogout }) {
 
               {/* Aperçu thème */}
               <div style={{ background: 'var(--s2)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px', textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--fm)', fontSize: 28, fontWeight: 800, color: 'var(--red)', marginBottom: 2 }}>LIFT</div>
+                <div style={{ fontFamily: 'var(--fm)', fontSize: 22, fontWeight: 800, color: 'var(--red)', marginBottom: 2, letterSpacing: 3 }}>GRINDSET</div>
                 <div style={{ fontFamily: 'var(--fb)', fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Aperçu du thème</div>
                 <div style={{ display: 'flex', gap: 5, justifyContent: 'center', marginTop: 8, flexWrap: 'wrap' }}>
                   <div style={{ background: 'var(--s3)', borderRadius: 6, padding: '3px 8px', fontSize: 10, fontFamily: 'var(--fb)', color: 'var(--text2)' }}>Sédentaire</div>

@@ -4,7 +4,7 @@ import { db } from '../lib/supabase'
 import { useStore, actions } from '../lib/store'
 import LoginScreen from './components/LoginScreen'
 import AppShell from './components/AppShell'
-import { LogoWelcome } from './components/Logo'
+import { LogoFull } from './components/Logo'
 
 export default function Home() {
   const currentUser = useStore(s => s.currentUser)
@@ -45,7 +45,7 @@ export default function Home() {
         }
       `}</style>
       <div className="lt-logo-loading">
-        <LogoWelcome size={160} />
+        <LogoFull width={220} />
       </div>
     </div>
   )

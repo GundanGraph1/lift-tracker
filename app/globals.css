@@ -1,16 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #0a0a0a;
-  --s1: #111111;
-  --s2: #1a1a1a;
-  --s3: #222222;
-  --border: #2a2a2a;
-  --border2: #333333;
-  --text: #f0f0f0;
-  --text2: #888888;
-  --text3: #555555;
-  --red: #ff3c3c;
+  --bg: #131210;
+  --s1: #1a1917;
+  --s2: #211f1d;
+  --s3: #2a2825;
+  --border: #2e2c29;
+  --border2: #3a3835;
+  --text: #f3eae3;
+  --text2: #d0c8c3;
+  --text3: #6b6560;
+  --red: #ff073b;
   --green: #22c55e;
   --blue: #3b82f6;
   --orange: #f97316;
@@ -68,12 +68,8 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   justify-content: space-between;
 }
 .header-logo {
-  font-family: var(--fm);
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--red);
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
 }
 
 /* ── PAGE CONTAINER ── */
@@ -359,6 +355,96 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   transform: translateX(-50%) translateY(0);
 }
 
+
+/* ── CARDS SÉANCES ── */
+.session-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: border-color .2s, transform .15s;
+}
+.session-card:hover {
+  border-color: var(--border2);
+  transform: translateY(-1px);
+}
+
+/* ── PAGE TITLES ── */
+.page-title {
+  font-family: var(--fm);
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: var(--text);
+  line-height: 1;
+  text-transform: uppercase;
+}
+.page-sub {
+  font-size: 13px;
+  color: var(--text3);
+  margin-top: 4px;
+  letter-spacing: .5px;
+}
+.page-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin-top: 14px;
+}
+
+/* ── STAT CARDS ── */
+.stat-card {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.stat-card-label {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.stat-card-value {
+  font-family: var(--fm);
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* ── EMPTY STATES ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 10px;
+}
+.empty-state-icon { font-size: 48px; opacity: 0.12; }
+.empty-state-title {
+  font-family: var(--fm);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+.empty-state-sub { font-size: 13px; color: var(--text3); opacity: 0.6; text-align: center; }
+
+/* ── FIELD LABEL ── */
+.field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* ── HIST BADGES ── */
 /* ── LEADERBOARD TABS ── */
 .lb-tab {
   background: var(--s2);
@@ -398,6 +484,7 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
 }
 .login-logo .lift { font-size: 64px; color: var(--red); display: block; }
 .login-logo .tracker { font-size: 64px; color: var(--text); display: block; }
+.login-logo .grindset { font-size: 52px; color: var(--red); display: block; }
 .login-logo-sub {
   font-size: 11px;
   letter-spacing: 3px;

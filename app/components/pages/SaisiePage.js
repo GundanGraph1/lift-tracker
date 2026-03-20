@@ -563,6 +563,13 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         <span style={{fontFamily:'var(--fm)',fontSize:22,fontWeight:700,color:'var(--green)'}}>{totalVolume.toLocaleString('fr')} <span style={{fontSize:14}}>kg</span></span>
       </div>
 
+      {exercises.length === 0 && (
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'40px 20px',gap:10,opacity:0.5}}>
+          <div style={{fontSize:44}}>🏋️</div>
+          <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',fontFamily:'var(--fb)'}}>Recherche un exercice ci-dessous pour commencer</div>
+        </div>
+      )}
+
       {exercises.map((ex) => {
         const last = getLastPerf(ex.name)
         return (

@@ -136,7 +136,13 @@ export default function FeedPage() {
           ...badgeEvents.map(b => ({...b, _type:'badge', _sortDate: b.unlocked_at}))
         ].sort((a,b) => new Date(b._sortDate) - new Date(a._sortDate))
 
-        if (allItems.length === 0) return <div style={{textAlign:'center',padding:40,color:'var(--text3)'}}><div style={{fontSize:40,marginBottom:12}}>{"👥"}</div><p>Aucune activité</p></div>
+        if (allItems.length === 0) return (
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'60px 20px',gap:12}}>
+          <div style={{fontSize:48,opacity:0.15}}>👥</div>
+          <div style={{fontFamily:'var(--fm)',fontSize:22,fontWeight:800,letterSpacing:2,color:'var(--text3)',textTransform:'uppercase'}}>Aucune activité</div>
+          <div style={{fontSize:13,color:'var(--text3)',opacity:0.6,textAlign:'center'}}>Les séances de ton groupe apparaîtront ici</div>
+        </div>
+      )
 
         return allItems.map(item => {
           if (item._type === 'badge') {

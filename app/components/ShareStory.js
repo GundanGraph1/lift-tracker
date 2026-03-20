@@ -101,7 +101,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
     ctx.font = '500 28px "Barlow", sans-serif'
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText(dateStr.toUpperCase(), M + 117, 245, 520 - 110)
+    ctx.fillText(dateStr.toUpperCase(), M + 117, 250, 520 - 110)
 
     // Divider
     ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.5)`

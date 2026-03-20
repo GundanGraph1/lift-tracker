@@ -9,8 +9,8 @@ export default function ExplorePage() {
 
   const tabs = [
     { k: 'stats',        l: '📊 Stats' },
-    { k: 'leaderboard',  l: '🏆 Top' },
     { k: 'feed',         l: '👥 Feed' },
+    { k: 'leaderboard',  l: '🏆 Top' },
   ]
 
   return (

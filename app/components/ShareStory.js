@@ -101,7 +101,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     const dateStr = new Date(session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
     ctx.font = '500 28px "Barlow", sans-serif'
     ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    ctx.fillText(dateStr.toUpperCase(), M + 110, 262, 520 - 110)
+    ctx.fillText(dateStr.toUpperCase(), M + 113, 257, 520 - 110)
 
     // Divider
     ctx.strokeStyle = `rgba(${hex2rgb(muscleCol)},0.5)`
@@ -400,29 +400,23 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
         {/* Sélecteur de couleur */}
         <div>
           <div style={{fontSize:11,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>Couleur de la story</div>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            {[
-              {c:null,    l:'Thème'},
-              {c:'#ff073b',l:'Rouge'},
-              {c:'#3b82f6',l:'Bleu'},
-              {c:'#22c55e',l:'Vert'},
-              {c:'#f97316',l:'Orange'},
-              {c:'#a855f7',l:'Violet'},
-              {c:'#fbbf24',l:'Or'},
-              {c:'#ec4899',l:'Rose'},
-              {c:'#14b8a6',l:'Teal'},
-            ].map(({c,l})=>{
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {/* Thème actuel */}
+            {[{c:null, l:'Thème'}].concat(
+              THEMES.map(t=>({c:t.preview, l:t.name, premium:t.premium||false}))
+            ).map(({c,l,premium})=>{
               const active = customColor === c
               const preview = c || themeAccent
               return (
                 <button key={l} onClick={()=>setCustomColor(c)} style={{
-                  display:'flex',flexDirection:'column',alignItems:'center',gap:4,
-                  padding:'6px 8px',borderRadius:10,border:`2px solid ${active?preview:'var(--border)'}`,
+                  display:'flex',flexDirection:'column',alignItems:'center',gap:3,
+                  padding:'6px 6px',borderRadius:10,border:`2px solid ${active?preview:'var(--border)'}`,
                   background:active?`${preview}15`:'var(--s2)',cursor:'pointer',
-                  transition:'all .15s',minWidth:44,
+                  transition:'all .15s',minWidth:40,position:'relative',
                 }}>
-                  <div style={{width:18,height:18,borderRadius:'50%',background:preview,boxShadow:active?`0 0 6px ${preview}60`:'none'}}/>
-                  <span style={{fontSize:9,fontWeight:700,color:active?preview:'var(--text3)'}}>{l}</span>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:preview,boxShadow:active?`0 0 8px ${preview}80`:'none',border:premium?`1.5px solid ${preview}`:'none'}}/>
+                  <span style={{fontSize:8,fontWeight:700,color:active?preview:'var(--text3)',maxWidth:36,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l}</span>
+                  {premium && <span style={{position:'absolute',top:2,right:2,fontSize:6,color:'var(--gold)'}}>★</span>}
                 </button>
               )
             })}

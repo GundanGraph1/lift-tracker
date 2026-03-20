@@ -31,7 +31,7 @@ export default function FeedPage() {
   const [expanded, setExpanded] = useState({})
   const [shareSession, setShareSession] = useState(null)
 
-  useEffect(() => { loadFeed() }, [filter])
+  useEffect(() => { loadFeed() }, []) // charger une seule fois au montage
 
   async function loadFeed() {
     setLoading(true)
@@ -43,7 +43,7 @@ export default function FeedPage() {
         db.from('badges').select('*')
       ])
       let sessions = (sessRes.data||[]).map(s=>({...s,exercises:typeof s.exercises==='string'?JSON.parse(s.exercises):(s.exercises||[])}))
-      if (filter!=='all') sessions = sessions.filter(s=>(s.muscle||'').split('+').includes(filter))
+      // Pas de filtre ici — on filtre en local dans le rendu
       const users = usersRes.data||[]
       const reactions = reactRes.data||[]
       const badges = badgesRes.data||[]

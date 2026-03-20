@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { MUSCLE_COLORS, BADGES, normalize } from '../../../lib/constants'
+import { MUSCLE_COLORS, getMuscleColor, getMuscleLabel, BADGES, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 export default function StatsPage() {

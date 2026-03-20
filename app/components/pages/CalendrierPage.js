@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useStore } from '../../../lib/store'
-import { MUSCLE_COLORS, MUSCLE_LABELS } from '../../../lib/constants'
+import { MUSCLE_COLORS, MUSCLE_LABELS, getMuscleColor, getMuscleLabel } from '../../../lib/constants'
 
 export default function CalendrierPage() {
   const sessions = useStore(s => s.sessions)
@@ -91,7 +91,7 @@ export default function CalendrierPage() {
           const isSelected=selected===day
           const isToday=todayDay===day
           const hasSession=daySessions.length>0
-          const color=hasSession?(MUSCLE_COLORS[(daySessions[0].muscle||'').split('+')[0]]||'var(--red)'):null
+          const color=hasSession?getMuscleColor(daySessions[0].muscle||''):null
           return (
             <div key={day} onClick={()=>hasSession?setSelected(isSelected?null:day):null} style={{
               aspectRatio:'1',borderRadius:8,display:'flex',flexDirection:'column',
@@ -114,14 +114,14 @@ export default function CalendrierPage() {
                 }}>
                   {daySessions.length > 1
                     ? `${daySessions.length}×`
-                    : (MUSCLE_LABELS[(daySessions[0].muscle||'').split('+')[0]] || (daySessions[0].muscle||'').split('+')[0] || '').slice(0,5)
+                    : getMuscleLabel(daySessions[0].muscle||'').slice(0,5)
                   }
                 </span>
               )}
               {hasSession && daySessions.length > 1 && (
                 <div style={{display:'flex',gap:1.5,justifyContent:'center'}}>
                   {daySessions.slice(0,3).map((ds,si)=>{
-                    const dc=MUSCLE_COLORS[(ds.muscle||'').split('+')[0]]||color
+                    const dc=getMuscleColor(ds.muscle||'')
                     return <div key={si} style={{width:3,height:3,borderRadius:'50%',background:isSelected?'rgba(255,255,255,0.7)':dc,flexShrink:0}}/>
                   })}
                 </div>

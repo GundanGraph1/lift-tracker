@@ -649,9 +649,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                       <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
                     </div>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )
               ))}

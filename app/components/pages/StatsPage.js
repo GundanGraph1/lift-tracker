@@ -4,6 +4,7 @@ import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
 import { MUSCLE_COLORS, getMuscleColor, getMuscleLabel, BADGES, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
+import { showBadgeUnlock } from '../BadgeUnlock'
 
 export default function StatsPage() {
   const sessions = useStore(s => s.sessions)
@@ -38,7 +39,7 @@ export default function StatsPage() {
       if (unlocked) {
         await db.from('badges').insert([{user_id:currentUser.id,badge_key:badge.key,unlocked_at:new Date().toISOString().split('T')[0]}])
         actions.setUserBadges([...(userBadges||[]),{badge_key:badge.key}])
-        showToast(`🏅 Badge débloqué : ${badge.name} ${badge.icon}`, badge.color)
+        showBadgeUnlock(badge)
       }
     }
   }

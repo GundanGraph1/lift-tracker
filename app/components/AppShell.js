@@ -10,6 +10,7 @@ import JournalPage from './pages/JournalPage'
 import ExplorePage from './pages/ExplorePage'
 import ProfilPage from './pages/ProfilPage'
 import UpdateBanner from './UpdateBanner'
+import BadgeUnlock from './BadgeUnlock'
 import MonthlyRecap from './MonthlyRecap'
 
 const NAV = [
@@ -148,6 +149,7 @@ export default function AppShell() {
   return (
     <div style={{display:'flex',flexDirection:'column',minHeight:'100vh'}}>
       <Toast />
+      <BadgeUnlock />
 
       {/* Header — logo seulement */}
       <div className="app-header">

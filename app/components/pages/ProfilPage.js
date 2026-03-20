@@ -263,53 +263,104 @@ export default function ProfilPage({ onLogout }) {
 
       {/* ── ONGLET BADGES ── */}
       {tab === 'badges' && (
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          {userBadges.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">🏅</div>
-              <div className="empty-state-title">Aucun badge</div>
-              <div className="empty-state-sub">Complète des défis pour débloquer des badges</div>
-            </div>
-          ) : (
-            <>
-              <div>
-                <label className="field-label">Badges affichés sur ton profil <span style={{color:'var(--text3)',fontWeight:400}}>(max 5)</span></label>
-                <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
-                  {userBadges.map(b=>{
-                    // Support badges mensuels (ex: champion_month_2025_3)
-                    const monthlyKey = b.badge_key?.startsWith('champion_month') ? 'champion_month'
-                      : b.badge_key?.startsWith('podium_month') ? 'podium_month' : null
-                    const badge=BADGES[monthlyKey || b.badge_key]; if(!badge) return null
-                    // Extraire le mois/année pour les badges mensuels
-                    const monthParts = monthlyKey ? b.badge_key.split('_').slice(-2) : null
-                    const badgeLabel = monthParts ? `${['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][parseInt(monthParts[1])-1]} ${monthParts[0]}` : null
-                    const isSelected=featuredBadges.includes(b.badge_key)
-                    return (
-                      <div key={b.badge_key} onClick={()=>{
-                        if(isSelected) setFeaturedBadges(f=>f.filter(k=>k!==b.badge_key))
-                        else if(featuredBadges.length<5) setFeaturedBadges(f=>[...f,b.badge_key])
-                      }} style={{
-                        display:'flex',alignItems:'center',gap:8,padding:'8px 12px',
-                        borderRadius:12,cursor:'pointer',transition:'all .15s',
-                        background:isSelected?`${badge.color}18`:'var(--s2)',
-                        border:`1.5px solid ${isSelected?badge.color:'var(--border)'}`,
-                        opacity:!isSelected&&featuredBadges.length>=5?0.35:1,
-                      }}>
-                        <span style={{fontSize:20}}>{badge.icon}</span>
-                        <div>
-                          <div style={{fontSize:12,fontWeight:700,color:isSelected?badge.color:'var(--text2)',fontFamily:'var(--fb)'}}>{badge.name}{badgeLabel ? ` — ${badgeLabel}` : ''}</div>
-                          <div style={{fontSize:10,color:'var(--text3)'}}>{badge.desc}</div>
-                        </div>
-                        {isSelected&&<span style={{fontSize:11,color:badge.color,marginLeft:'auto',fontWeight:700}}>✓</span>}
+        <div style={{display:'flex',flexDirection:'column',gap:20}}>
+
+          {/* Badges obtenus — sélection pour le profil */}
+          {userBadges.length > 0 && (
+            <div>
+              <label className="field-label">Mes badges <span style={{color:'var(--text3)',fontWeight:400}}>— clique pour afficher (max 5)</span></label>
+              <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:8}}>
+                {userBadges.map(b=>{
+                  const monthlyKey = b.badge_key?.startsWith('champion_month') ? 'champion_month' : b.badge_key?.startsWith('podium_month') ? 'podium_month' : null
+                  const badge=BADGES[monthlyKey||b.badge_key]; if(!badge) return null
+                  const monthParts = monthlyKey ? b.badge_key.split('_').slice(-2) : null
+                  const badgeLabel = monthParts ? `${['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][parseInt(monthParts[1])-1]} ${monthParts[0]}` : null
+                  const isSelected=featuredBadges.includes(b.badge_key)
+                  return (
+                    <div key={b.badge_key} onClick={()=>{
+                      if(isSelected) setFeaturedBadges(f=>f.filter(k=>k!==b.badge_key))
+                      else if(featuredBadges.length<5) setFeaturedBadges(f=>[...f,b.badge_key])
+                    }} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:12,cursor:'pointer',transition:'all .15s',background:isSelected?`${badge.color}15`:'var(--s2)',border:`1.5px solid ${isSelected?badge.color:'var(--border)'}`,opacity:!isSelected&&featuredBadges.length>=5?0.4:1}}>
+                      <span style={{fontSize:22,flexShrink:0}}>{badge.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:700,color:isSelected?badge.color:'var(--text)'}}>{badge.name}{badgeLabel?` — ${badgeLabel}`:''}</div>
+                        <div style={{fontSize:11,color:'var(--text3)'}}>{badge.desc}</div>
                       </div>
-                    )
-                  })}
-                </div>
+                      {isSelected && <span style={{fontSize:14,color:badge.color,flexShrink:0}}>✓</span>}
+                    </div>
+                  )
+                })}
               </div>
-              <button className="btn-primary" onClick={save} disabled={saving}>
+              <button className="btn-primary" style={{marginTop:10}} onClick={save} disabled={saving}>
                 {saving?'⏳...':'💾 Sauvegarder la sélection'}
               </button>
-            </>
+            </div>
+          )}
+
+          {/* Tous les badges par catégorie */}
+          <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            <label className="field-label">Tous les badges</label>
+
+            {[
+              { label:'🏆 Champion', keys: ['champion_month','podium_month'] },
+              { label:'💪 Volume',   keys: ['volume_100k','volume_1M'] },
+            ].map(cat=>(
+              <div key={cat.label}>
+                <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1.5,textTransform:'uppercase',fontWeight:700,marginBottom:6}}>{cat.label}</div>
+                {cat.keys.map(k=>{
+                  const badge=BADGES[k]; if(!badge) return null
+                  const obtained=userBadges.some(b=>b.badge_key===k||b.badge_key?.startsWith(k))
+                  return (
+                    <div key={k} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:12,marginBottom:5,background:'var(--s2)',border:`1px solid ${obtained?(badge.color||'var(--red)'):'var(--border)'}`,opacity:obtained?1:0.45}}>
+                      <span style={{fontSize:22,flexShrink:0,filter:obtained?'none':'grayscale(1)'}}>{badge.icon}</span>
+                      <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:obtained?(badge.color||'var(--text)'):'var(--text3)'}}>{badge.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{badge.desc}</div></div>
+                      {obtained && <span style={{fontSize:12,flexShrink:0}}>✅</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+
+            {/* Bench Press — selon genre */}
+            <div>
+              <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1.5,textTransform:'uppercase',fontWeight:700,marginBottom:6}}>🏋️ Bench Press</div>
+              {Object.values(BADGES).filter(b=>b.key?.startsWith('bench_')&&(currentUser?.gender==='female'?b.gender==='female':b.gender==='male')).map(badge=>{
+                const obtained=userBadges.some(b=>b.badge_key===badge.key)
+                return (
+                  <div key={badge.key} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:12,marginBottom:5,background:'var(--s2)',border:`1px solid ${obtained?(badge.color||'var(--blue)'):'var(--border)'}`,opacity:obtained?1:0.45}}>
+                    <span style={{fontSize:22,flexShrink:0,filter:obtained?'none':'grayscale(1)'}}>{badge.icon}</span>
+                    <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:obtained?(badge.color||'var(--text)'):'var(--text3)'}}>{badge.name}</div><div style={{fontSize:11,color:'var(--text3)'}}>{badge.desc}</div></div>
+                    {obtained && <span style={{fontSize:12,flexShrink:0}}>✅</span>}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Badges mystère */}
+            <div>
+              <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1.5,textTransform:'uppercase',fontWeight:700,marginBottom:6}}>🔮 Mystère</div>
+              {Object.values(BADGES).filter(b=>b.secret).map(badge=>{
+                const obtained=userBadges.some(b=>b.badge_key===badge.key)
+                return (
+                  <div key={badge.key} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',borderRadius:12,marginBottom:5,background:'var(--s2)',border:`1px solid ${obtained?'var(--gold)':'var(--border)'}`,opacity:obtained?1:0.55}}>
+                    <span style={{fontSize:22,flexShrink:0}}>{obtained?badge.icon:'🔒'}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:obtained?'var(--gold)':'var(--text3)'}}>{obtained?badge.name:'Badge mystère'}</div>
+                      <div style={{fontSize:11,color:'var(--text3)'}}>{obtained?badge.desc:'Condition secrète à découvrir...'}</div>
+                    </div>
+                    {obtained && <span style={{fontSize:12,flexShrink:0}}>✅</span>}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {userBadges.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon">🏅</div>
+              <div className="empty-state-title">Aucun badge encore</div>
+              <div className="empty-state-sub">Complète des défis pour débloquer tes premiers badges</div>
+            </div>
           )}
         </div>
       )}

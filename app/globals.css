@@ -1,16 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #0a0a0a;
-  --s1: #111111;
-  --s2: #1a1a1a;
-  --s3: #222222;
-  --border: #2a2a2a;
-  --border2: #333333;
-  --text: #f0f0f0;
-  --text2: #888888;
-  --text3: #555555;
-  --red: #ff3c3c;
+  --bg: #131210;
+  --s1: #1a1917;
+  --s2: #211f1d;
+  --s3: #2a2825;
+  --border: #2e2c29;
+  --border2: #3a3835;
+  --text: #f3eae3;
+  --text2: #d0c8c3;
+  --text3: #6b6560;
+  --red: #ff073b;
   --green: #22c55e;
   --blue: #3b82f6;
   --orange: #f97316;
@@ -68,12 +68,8 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
   justify-content: space-between;
 }
 .header-logo {
-  font-family: var(--fm);
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--red);
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
 }
 
 /* ── PAGE CONTAINER ── */
@@ -488,6 +484,7 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
 }
 .login-logo .lift { font-size: 64px; color: var(--red); display: block; }
 .login-logo .tracker { font-size: 64px; color: var(--text); display: block; }
+.login-logo .grindset { font-size: 52px; color: var(--red); display: block; }
 .login-logo-sub {
   font-size: 11px;
   letter-spacing: 3px;

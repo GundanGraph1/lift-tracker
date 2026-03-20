@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Lift Tracker',
+  title: 'Grindset',
   description: 'Suivi muscu entre potes',
 }
 

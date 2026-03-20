@@ -313,7 +313,7 @@ export default function ProfilPage({ onLogout }) {
         <div style={{display:'flex',flexDirection:'column',gap:14}}>
           {/* Aperçu */}
           <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:14,padding:'14px',textAlign:'center'}}>
-            <div style={{fontFamily:'var(--fm)',fontSize:32,fontWeight:900,color:'var(--red)',letterSpacing:4}}>LIFT</div>
+            <div style={{fontFamily:'var(--fm)',fontSize:28,fontWeight:900,color:'var(--red)',letterSpacing:4}}>GRINDSET</div>
             <div style={{fontFamily:'var(--fb)',fontSize:12,color:'var(--text2)',marginTop:2}}>Aperçu du thème</div>
           </div>
 

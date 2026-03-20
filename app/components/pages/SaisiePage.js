@@ -46,6 +46,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [localPresets, setLocalPresets] = useState(null)
   const [editingPreset, setEditingPreset] = useState(null) // preset en cours d'édition
   const [activePreset, setActivePreset] = useState(null) // preset chargé pour cette séance
+  const [showMuscleDetail, setShowMuscleDetail] = useState(false) // accordion groupes fins
   const [editPresetName, setEditPresetName] = useState('')
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
@@ -532,31 +533,62 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       {/* ─── MODE MUSCU ─── */}
       {(
         <div>
-          <label className="field-label">Groupe musculaire</label>
-          {/* Raccourcis rapides */}
-          <div style={{display:'flex',gap:5,flexWrap:'wrap',marginBottom:8}}>
-            {MUSCLE_SHORTCUTS.map(s => (
-              <button key={s.key} onClick={()=>setMuscles(s.muscles)} style={{
-                padding:'4px 10px',fontSize:11,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',
-                borderRadius:8,border:'1px solid var(--border2)',
-                background:JSON.stringify([...s.muscles].sort())===JSON.stringify([...muscles].sort())?'var(--red)':'var(--s3)',
-                color:JSON.stringify([...s.muscles].sort())===JSON.stringify([...muscles].sort())?'white':'var(--text3)',
-                transition:'all .15s',
-              }}>{s.label}</button>
-            ))}
-          </div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:12}}>
-            {MUSCLE_GROUPS.map(m => {
-              const sel = muscles.includes(m)
-              return <button key={m} onClick={()=>setMuscles(prev=>sel?prev.filter(x=>x!==m):[...prev,m])} style={{background:sel?'var(--red)':'var(--s2)',border:`1px solid ${sel?'var(--red)':'var(--border)'}`,borderRadius:8,padding:'5px 12px',color:sel?'white':'var(--text2)',cursor:'pointer',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,transition:'all 0.15s'}}>{MUSCLE_LABELS[m]}</button>
+          <label className="field-label">Séance</label>
+
+          {/* Niveau 1 — Raccourcis rapides */}
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
+            {MUSCLE_SHORTCUTS.map(s => {
+              const isActive = JSON.stringify([...s.muscles].sort()) === JSON.stringify([...muscles].sort())
+              return (
+                <button key={s.key} onClick={()=>{setMuscles(s.muscles);setShowMuscleDetail(false)}} style={{
+                  padding:'8px 14px',fontSize:13,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',
+                  borderRadius:10,border:`1.5px solid ${isActive?'var(--red)':'var(--border)'}`,
+                  background:isActive?'var(--red)':'var(--s2)',
+                  color:isActive?'white':'var(--text2)',
+                  transition:'all .15s',
+                }}>{s.label}</button>
+              )
             })}
-            {muscles.length > 0 && (
-              <div style={{width:'100%',marginTop:4,fontSize:11,color:'var(--text3)'}}>
-                Séance : <span style={{color:'var(--text2)',fontWeight:600}}>{muscles.map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</span>
-                {muscles.length > 1 && <button onClick={()=>setMuscles(['Dos'])} style={{marginLeft:8,background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:11}}>✕ Reset</button>}
-              </div>
-            )}
+            {/* Bouton Autre */}
+            <button onClick={()=>setShowMuscleDetail(v=>!v)} style={{
+              padding:'8px 14px',fontSize:13,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',
+              borderRadius:10,border:`1.5px solid ${showMuscleDetail||(!MUSCLE_SHORTCUTS.some(s=>JSON.stringify([...s.muscles].sort())===JSON.stringify([...muscles].sort()))&&muscles.length>0)?'var(--text3)':'var(--border)'}`,
+              background:'var(--s2)',color:'var(--text2)',transition:'all .15s',
+              display:'flex',alignItems:'center',gap:5,
+            }}>
+              ⚙️ Autre
+              <span style={{fontSize:10,opacity:0.6}}>{showMuscleDetail?'▲':'▼'}</span>
+            </button>
           </div>
+
+          {/* Niveau 2 — Groupes fins (accordion) */}
+          {showMuscleDetail && (
+            <div style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12,padding:12,marginBottom:10}}>
+              <div style={{fontSize:10,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',fontWeight:700,marginBottom:8}}>Groupes musculaires</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {MUSCLE_GROUPS.map(m => {
+                  const sel = muscles.includes(m)
+                  return (
+                    <button key={m} onClick={()=>setMuscles(prev=>sel?prev.filter(x=>x!==m):[...prev,m])} style={{
+                      padding:'5px 11px',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',
+                      borderRadius:8,border:`1px solid ${sel?'var(--red)':'var(--border)'}`,
+                      background:sel?'var(--red)':'var(--s3)',
+                      color:sel?'white':'var(--text2)',transition:'all .15s',
+                    }}>{MUSCLE_LABELS[m]||m}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Récap sélection actuelle */}
+          {muscles.length > 0 && (
+            <div style={{fontSize:11,color:'var(--text3)',marginBottom:10,display:'flex',alignItems:'center',gap:6}}>
+              <span>📋</span>
+              <span style={{color:'var(--text2)',fontWeight:600}}>{muscles.map(m=>MUSCLE_LABELS[m]||m).join(' + ')}</span>
+              {muscles.length > 0 && <button onClick={()=>{setMuscles([]);setShowMuscleDetail(false)}} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:11,padding:0}}>✕</button>}
+            </div>
+          )}
       <div style={{marginBottom:16}}>
         <label className="field-label">Notes (optionnel)</label>
         <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="RPE, douleurs, humeur..." style={{resize:'none'}} />
@@ -592,12 +624,12 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
             <div style={{padding:'10px 14px'}}>
               {/* Ligne mode unilatéral */}
               <div onClick={()=>toggleUnilateral(ex.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:6,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
-                <div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
+                    <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                  </div>
                   <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>Mode unilatéral</span>
-                  <span style={{fontSize:10,color:'var(--text3)',marginLeft:6}}>Poids et reps par côté (G / D)</span>
-                </div>
-                <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
-                  <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
+                  {ex.unilateral && <span style={{fontSize:10,color:'var(--text3)'}}>— poids et reps par côté (G / D)</span>}
                 </div>
               </div>
 

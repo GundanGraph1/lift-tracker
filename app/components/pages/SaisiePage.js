@@ -8,14 +8,6 @@ import { showToast } from '../Toast'
 
 const BW_EXERCISES = ['Pompes', 'Push-Up Lesté']
 
-const TECHNIQUES = [
-  { k: 'dropset',    l: 'Drop set',    color: '#ef4444' },
-  { k: 'superset',   l: 'Super set',   color: '#8b5cf6' },
-  { k: 'restpause',  l: 'Rest-pause',  color: '#f97316' },
-  { k: 'giant',      l: 'Giant set',   color: '#06b6d4' },
-  { k: 'cluster',    l: 'Cluster',     color: '#10b981' },
-  { k: 'myo',        l: 'Myo-reps',    color: '#f59e0b' },
-]
 
 const isBW = (name) => BW_EXERCISES.some(bw => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest'))
 
@@ -656,25 +648,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                         })()}
                       <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((parseFloat(st.r)||0)*(parseFloat(st.w)||0)).toLocaleString('fr')}</span>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
-                    </div>
-                    {/* Tag technique compact */}
-                    <div style={{paddingLeft:34,marginTop:2,position:'relative'}}>
-                      {st.technique ? (
-                        <div style={{display:'flex',alignItems:'center',gap:4}}>
-                          {(()=>{const t=TECHNIQUES.find(x=>x.k===st.technique);return t?(<button onClick={()=>updateSet(ex.id,st.id,'technique',null)} style={{padding:'2px 8px',fontSize:10,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:6,border:`1px solid ${t.color}`,background:`${t.color}20`,color:t.color}}>{t.l} ×</button>):null})()}
-                        </div>
-                      ) : (
-                        <div style={{position:'relative'}}>
-                          <button onClick={()=>updateSet(ex.id,st.id,'_showTech',!st._showTech)} style={{padding:'1px 7px',fontSize:10,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',borderRadius:6,border:'1px solid var(--border)',background:'transparent',color:'var(--text3)'}}>⚡ Technique</button>
-                          {st._showTech && (
-                            <div style={{position:'absolute',bottom:'calc(100% + 4px)',left:0,zIndex:50,background:'var(--s1)',border:'1px solid var(--border2)',borderRadius:10,padding:8,display:'flex',gap:5,flexWrap:'wrap',width:210,boxShadow:'0 4px 20px rgba(0,0,0,0.5)'}}>
-                              {TECHNIQUES.map(t=>(
-                                <button key={t.k} onClick={()=>updateSet(ex.id,st.id,'technique',t.k)} style={{padding:'3px 8px',fontSize:10,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer',borderRadius:6,border:`1px solid ${t.color}`,background:`${t.color}15`,color:t.color}}>{t.l}</button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 )

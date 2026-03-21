@@ -242,8 +242,10 @@ export default function FeedPage() {
               </div>
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
                 {s.exercises.slice(0,3).map((e,i)=>{
-                  const maxW=e.sets.length?Math.max(...e.sets.map(st=>e.unilateral?(Math.max(parseFloat(st.wL)||0,parseFloat(st.wR)||0)):(parseFloat(st.w)||0))):0
-                  return <div key={i} style={{background:'var(--s3)',borderRadius:8,padding:'5px 10px',fontSize:12,color:'var(--text2)'}}>{e.name} <span style={{color:'var(--text)',fontWeight:600}}>{maxW}kg</span></div>
+                  const validSets=e.sets.filter(st=>e.unilateral?(parseFloat(st.wL||0)||parseFloat(st.wR||0))>0:(parseFloat(st.w)||0)>0)
+                  const maxW=validSets.length?Math.max(...validSets.map(st=>e.unilateral?(Math.max(parseFloat(st.wL)||0,parseFloat(st.wR)||0)):(parseFloat(st.w)||0))):0
+                  const validReps=validSets.length
+                  return <div key={i} style={{background:'var(--s3)',borderRadius:8,padding:'5px 10px',fontSize:12,color:'var(--text2)'}}>{e.name}{e.unilateral?' 🔀':''} {maxW>0&&<span style={{color:'var(--text)',fontWeight:600}}>{maxW}kg</span>}</div>
                 })}
                 {s.exercises.length>3&&<div style={{background:'var(--s3)',borderRadius:8,padding:'5px 10px',fontSize:12,color:'var(--text3)'}}>+{s.exercises.length-3} exos</div>}
               </div>
@@ -257,7 +259,11 @@ export default function FeedPage() {
                         <span style={{fontSize:11,color:'var(--text3)'}}>{isBW(e.name)?'BW':e.sets.reduce((a,st)=>a+(e.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0).toLocaleString('fr')+' kg'}</span>
                       </div>
                       <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                        {e.sets.map((st,si)=><span key={si} style={{background:'var(--s3)',borderRadius:6,padding:'3px 7px',fontSize:11,color:'var(--text2)'}}>{st.r}×{isBW(e.name)?'BW':st.w+'kg'}</span>)}
+                        {e.sets.filter(st=>e.unilateral?(parseFloat(st.rL||st.r)||parseFloat(st.rR||st.r))>0:(parseFloat(st.r)||0)>0).map((st,si)=>(
+                          e.unilateral
+                            ? <span key={si} style={{background:'var(--s3)',borderRadius:6,padding:'3px 7px',fontSize:11,color:'var(--text2)'}}>G {st.rL}×{st.wL}kg / D {st.rR}×{st.wR}kg</span>
+                            : <span key={si} style={{background:'var(--s3)',borderRadius:6,padding:'3px 7px',fontSize:11,color:'var(--text2)'}}>{st.r}×{isBW(e.name)?'BW':st.w+'kg'}</span>
+                        ))}
                       </div>
                     </div>
                   ))}

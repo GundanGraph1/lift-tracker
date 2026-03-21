@@ -20,8 +20,8 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
     .sort((a,b) => b.sets.reduce((s,st)=>s+(b.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0) - a.sets.reduce((s,st)=>s+(a.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0))
-  const totalVol = exercises.reduce((a,ex) => a+ex.sets.reduce((b,st)=>b+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0), 0)
-  const totalSets = (session.exercises||[]).reduce((a,ex)=>a+ex.sets.length,0)
+  const totalVol = exercises.reduce((a,ex) => a+ex.sets.filter(st => ex.unilateral ? ((parseFloat(st.rL)||parseFloat(st.rR)||0)>0) : ((parseFloat(st.r)||0)>0)).reduce((b,st)=>b+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0), 0)
+  const totalSets = (session.exercises||[]).reduce((a,ex)=>a+ex.sets.filter(st => ex.unilateral ? ((parseFloat(st.rL)||parseFloat(st.rR)||0)>0&&(parseFloat(st.wL)||parseFloat(st.wR)||0)>0) : ((parseFloat(st.r)||0)>0&&(parseFloat(st.w)||0)>0)).length,0)
   const sessionPRs = prs.filter(p => p.date === session.session_date && !p.is_manual)
 
   useEffect(() => {
@@ -178,7 +178,9 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
       ctx.fillText(name, M + 22, y + Math.floor(exCardH * 0.44))
 
       // Sets info
-      const setsStr = `${ex.sets.length} séries · max ${bestSet.w||0}kg`
+      const validSets = ex.sets.filter(st => ex.unilateral ? ((parseFloat(st.rL)||parseFloat(st.rR)||0)>0&&(parseFloat(st.wL)||parseFloat(st.wR)||0)>0) : ((parseFloat(st.r)||0)>0&&(parseFloat(st.w)||0)>0))
+      const bestW = ex.unilateral ? Math.max(parseFloat(bestSet.wL||bestSet.w)||0, parseFloat(bestSet.wR||bestSet.w)||0) : (parseFloat(bestSet.w)||0)
+      const setsStr = `${validSets.length} série${validSets.length>1?'s':''} · max ${bestW}kg`
       ctx.font = `500 ${Math.max(20, Math.floor(exCardH * 0.23))}px "Barlow", sans-serif`
       ctx.fillStyle = 'rgba(255,255,255,0.45)'
       ctx.fillText(setsStr, M + 22, y + Math.floor(exCardH * 0.78))

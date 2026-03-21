@@ -254,7 +254,7 @@ export default function FeedPage() {
                     <div key={ei} style={{padding:'7px 0',borderBottom:'1px solid var(--border)'}}>
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                         <span style={{fontSize:13,fontWeight:600}}>{e.name}</span>
-                        <span style={{fontSize:11,color:'var(--text3)'}}>{isBW(e.name)?'BW':e.sets.reduce((a,st)=>a+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0).toLocaleString('fr')+' kg'}</span>
+                        <span style={{fontSize:11,color:'var(--text3)'}}>{isBW(e.name)?'BW':e.sets.reduce((a,st)=>a+(e.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0).toLocaleString('fr')+' kg'}</span>
                       </div>
                       <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
                         {e.sets.map((st,si)=><span key={si} style={{background:'var(--s3)',borderRadius:6,padding:'3px 7px',fontSize:11,color:'var(--text2)'}}>{st.r}×{isBW(e.name)?'BW':st.w+'kg'}</span>)}

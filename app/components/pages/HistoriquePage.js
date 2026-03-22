@@ -1,7 +1,7 @@
 'use client'
 const isBW = (name) => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest')
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore } from '../../../lib/store'
 import ShareStory from '../ShareStory'
@@ -12,6 +12,7 @@ export default function HistoriquePage({ onChanged }) {
   const sessions = useStore(s => s.sessions)
   const currentUser = useStore(s => s.currentUser)
   const [filterMuscle, setFilterMuscle] = useState('all')
+  const [searchEx, setSearchEx] = useState('')
   const [editSession, setEditSession] = useState(null)
   const [shareSession, setShareSession] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -25,11 +26,33 @@ export default function HistoriquePage({ onChanged }) {
     Jambes: ['Jambes','Quad','Ischio','Quadriceps'],
     Abdominaux: ['Abdominaux','Abdos'],
   }
-  const filtered = filterMuscle==='all' ? sessions : sessions.filter(s => {
+  const filteredByMuscle = useMemo(() => filterMuscle==='all' ? sessions : sessions.filter(s => {
     const muscles = (s.muscle||'').split('+')
     const aliases = MUSCLE_ALIASES[filterMuscle] || [filterMuscle]
     return muscles.some(m => aliases.includes(m) || m === filterMuscle)
-  })
+  }), [sessions, filterMuscle])
+  const filtered = useMemo(() => searchEx.trim()
+    ? filteredByMuscle.filter(s => (s.exercises||[]).some(e => normalize(e.name).includes(normalize(searchEx))))
+    : filteredByMuscle, [filteredByMuscle, searchEx])
+
+  function exportCSV() {
+    const rows = [['Date','Heure','Muscles','Exercice','Série','Reps','Poids (kg)','Volume','Notes']]
+    sessions.forEach(s => {
+      (s.exercises||[]).forEach(e => {
+        e.sets.forEach((st,si) => {
+          const r = e.unilateral ? ((parseFloat(st.rL)||0)+(parseFloat(st.rR)||0)) : (parseFloat(st.r)||0)
+          const w = e.unilateral ? Math.max(parseFloat(st.wL)||0,parseFloat(st.wR)||0) : (parseFloat(st.w)||0)
+          rows.push([s.session_date,s.session_time||'',(s.muscle||''),e.name,si+1,r,w,r*w,s.notes||''])
+        })
+      })
+    })
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n')
+    const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8;'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `grindset_export_${new Date().toISOString().split('T')[0]}.csv`
+    a.click(); URL.revokeObjectURL(url)
+    showToast('📥 CSV exporté !')
+  }
 
   async function deleteSession(id) {
     if (!confirm('Supprimer cette séance ?')) return
@@ -164,6 +187,16 @@ export default function HistoriquePage({ onChanged }) {
         <div className="page-title">HISTORIQUE</div>
         <div className="page-sub">{sessions.length} séances enregistrées</div>
         <hr className="page-divider" />
+      </div>
+
+      {/* Search + Export */}
+      <div style={{display:'flex',gap:8,marginBottom:12}}>
+        <div className="ex-search-wrap" style={{flex:1}}>
+          <span>🔍</span>
+          <input className="ex-search-input" value={searchEx} onChange={e=>setSearchEx(e.target.value)} placeholder="Chercher un exercice..." />
+          {searchEx && <button onClick={()=>setSearchEx('')} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>}
+        </div>
+        <button onClick={exportCSV} style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:12,padding:'0 14px',color:'var(--text2)',fontSize:12,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>📥 CSV</button>
       </div>
 
       <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:16}}>

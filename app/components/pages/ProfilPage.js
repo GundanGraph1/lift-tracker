@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
 import { THEMES, FONT_PACKS, applyTheme, getThemeFromUser } from '../../../lib/themes'
@@ -13,6 +13,13 @@ export default function ProfilPage({ onLogout }) {
   const { themeKey: initTheme, fontKey: initFont } = getThemeFromUser(currentUser)
 
   const [tab, setTab] = useState('profil') // 'profil' | 'sante' | 'badges' | 'theme'
+
+  // Écouter l'événement de navigation vers l'onglet Santé (depuis UpdateBanner)
+  useEffect(() => {
+    const handler = (e) => setTab(e.detail)
+    window.addEventListener('lt-open-tab', handler)
+    return () => window.removeEventListener('lt-open-tab', handler)
+  }, [])
 
   // Profil states
   const [weightKg, setWeightKg] = useState(currentUser?.weight_kg?.toString() || '')
@@ -255,6 +262,52 @@ export default function ProfilPage({ onLogout }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Notifications push */}
+      {tab === 'profil' && (
+        <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:14,padding:16,marginTop:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase',marginBottom:10}}>🔔 Notifications</div>
+          <div style={{fontSize:12,color:'var(--text3)',marginBottom:10}}>Reçois un rappel pour t&apos;entraîner</div>
+          <button onClick={async()=>{
+            if (!('Notification' in window)) { showToast('Notifications non supportées', 'var(--orange)'); return }
+            if (!('serviceWorker' in navigator)) { showToast('Service Worker non supporté', 'var(--orange)'); return }
+            try {
+              const reg = await navigator.serviceWorker.register('/sw.js')
+              const perm = await Notification.requestPermission()
+              if (perm === 'granted') {
+                showToast('✅ Notifications activées !', 'var(--green)')
+                localStorage.setItem('lt_notif_enabled', '1')
+                // Schedule daily reminder at 18h
+                if (reg.active) {
+                  const now = new Date()
+                  const next18 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 18, 0, 0)
+                  if (now > next18) next18.setDate(next18.getDate() + 1)
+                  const delay = next18 - now
+                  setTimeout(() => {
+                    reg.showNotification('🏋️ Grindset', {
+                      body: 'C&apos;est l&apos;heure de s&apos;entraîner ! 💪',
+                      icon: '/web-app-manifest-192x192.png',
+                      badge: '/favicon-96x96.png',
+                      vibrate: [200, 100, 200],
+                    })
+                  }, delay)
+                }
+              } else {
+                showToast('Notifications refusées', 'var(--orange)')
+              }
+            } catch(e) { showToast('Erreur: '+e.message, 'var(--red)') }
+          }} style={{
+            width:'100%',padding:'10px 16px',
+            background:localStorage.getItem('lt_notif_enabled')?'rgba(34,197,94,.1)':'var(--s2)',
+            border:`1px solid ${localStorage.getItem('lt_notif_enabled')?'var(--green)':'var(--border)'}`,
+            borderRadius:10,cursor:'pointer',
+            color:localStorage.getItem('lt_notif_enabled')?'var(--green)':'var(--text2)',
+            fontSize:13,fontFamily:'var(--fb)',fontWeight:600,
+          }}>
+            {localStorage.getItem('lt_notif_enabled') ? '✅ Notifications activées' : '🔔 Activer les notifications'}
+          </button>
         </div>
       )}
 

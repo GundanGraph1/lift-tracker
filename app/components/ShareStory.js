@@ -9,14 +9,14 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
   const canvasRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const [customColor, setCustomColor] = useState(null)
+  const [selectedThemeKey, setSelectedThemeKey] = useState(null)
 
   const muscles = (session.muscle||'').split('+').map(m => MUSCLE_LABELS[m]||m)
   const muscleColor = MUSCLE_COLORS[(session.muscle||'').split('+')[0]] || '#ff3c3c'
   // Use user's theme accent color if set, otherwise fallback to muscle color
   const { themeKey } = getThemeFromUser(user)
   const themeAccent = THEMES.find(t=>t.key===themeKey)?.preview || muscleColor
-  const storyColor = customColor || themeAccent
+  const storyColor = selectedThemeKey ? (THEMES.find(t=>t.key===selectedThemeKey)?.preview || themeAccent) : themeAccent
   const exercises = (session.exercises||[]).filter(ex => !isBW(ex.name))
   const topExos = [...exercises]
     .sort((a,b) => b.sets.reduce((s,st)=>s+(b.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0) - a.sets.reduce((s,st)=>s+(a.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0))
@@ -32,7 +32,7 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
     canvas.width = 1080
     canvas.height = 1920
     draw(ctx, canvas)
-  }, [customColor])
+  }, [selectedThemeKey])
 
   function hex2rgb(hex) {
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
@@ -404,13 +404,13 @@ export default function ShareStory({ session, user, prs = [], onClose }) {
           <div style={{fontSize:11,color:'var(--text3)',letterSpacing:1,textTransform:'uppercase',marginBottom:8,fontWeight:700}}>Couleur de la story</div>
           <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
             {/* Thème actuel */}
-            {[{c:null, l:'Thème'}].concat(
-              THEMES.map(t=>({c:t.preview, l:t.name, premium:t.premium||false}))
-            ).map(({c,l,premium})=>{
-              const active = customColor === c
+            {[{key:null, c:null, l:'Thème', premium:false}].concat(
+              THEMES.map(t=>({key:t.key, c:t.preview, l:t.name, premium:t.premium||false}))
+            ).map(({key,c,l,premium})=>{
+              const active = selectedThemeKey === key
               const preview = c || themeAccent
               return (
-                <button key={l} onClick={()=>setCustomColor(c)} style={{
+                <button key={key||'_default'} onClick={()=>setSelectedThemeKey(key)} style={{
                   display:'flex',flexDirection:'column',alignItems:'center',gap:3,
                   padding:'6px 6px',borderRadius:10,border:`2px solid ${active?preview:'var(--border)'}`,
                   background:active?`${preview}15`:'var(--s2)',cursor:'pointer',

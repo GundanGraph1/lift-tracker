@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
 import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, MUSCLE_SHORTCUTS, normalize } from '../../../lib/constants'
@@ -59,17 +59,51 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [restTimer, setRestTimer] = useState(null)
   const [restLeft, setRestLeft] = useState(0)
   const restRef = useRef(null)
+  const restEndRef = useRef(null) // timestamp absolu de fin du timer
+  const [swipeOffset, setSwipeOffset] = useState({})
+  const swipeRef2 = useRef({startX:0, setKey:null})
 
   useEffect(() => {
-    if (restLeft <= 0) { clearInterval(restRef.current); return }
+    if (restLeft <= 0) return
+    // Calculer le timestamp de fin (survit au passage en arrière-plan)
+    if (!restEndRef.current) restEndRef.current = Date.now() + restLeft * 1000
+
     restRef.current = setInterval(() => {
-      setRestLeft(r => {
-        if (r <= 1) { clearInterval(restRef.current); if (navigator.vibrate) navigator.vibrate([200,100,200]); showToast('⏱ Temps de repos terminé !', 'var(--green)'); return 0 }
-        return r - 1
-      })
-    }, 1000)
-    return () => clearInterval(restRef.current)
-  }, [restLeft])
+      const remaining = Math.round((restEndRef.current - Date.now()) / 1000)
+      if (remaining <= 0) {
+        clearInterval(restRef.current)
+        restEndRef.current = null
+        setRestLeft(0)
+        if (navigator.vibrate) navigator.vibrate([200,100,200])
+        showToast('⏱ Temps de repos terminé !', 'var(--green)')
+        // Notification si app en arrière-plan
+        if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification('Grindset', { body: 'Temps de repos terminé !', icon: '/web-app-manifest-192x192.png', vibrate: [200,100,200] })
+        }
+      } else {
+        setRestLeft(remaining)
+      }
+    }, 500) // 500ms pour rattraper le retard quand on revient du background
+
+    // Quand on revient au premier plan, recalculer immédiatement
+    const handleVisibility = () => {
+      if (!document.hidden && restEndRef.current) {
+        const remaining = Math.round((restEndRef.current - Date.now()) / 1000)
+        if (remaining <= 0) {
+          clearInterval(restRef.current)
+          restEndRef.current = null
+          setRestLeft(0)
+          if (navigator.vibrate) navigator.vibrate([200,100,200])
+          showToast('⏱ Temps de repos terminé !', 'var(--green)')
+        } else {
+          setRestLeft(remaining)
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => { clearInterval(restRef.current); document.removeEventListener('visibilitychange', handleVisibility) }
+  }, [restLeft > 0])
 
   // Clé de brouillon unique par utilisateur
   const draftKey = currentUser ? `lift_draft_${currentUser.id}` : null
@@ -157,7 +191,39 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     }
   }
 
-  function startRest(secs) { clearInterval(restRef.current); setRestLeft(secs); setRestTimer(secs) }
+  function startRest(secs) { clearInterval(restRef.current); restEndRef.current = Date.now() + secs * 1000; setRestLeft(secs); setRestTimer(secs) }
+
+  function loadLastSession() {
+    if (!sessions.length) { showToast('Aucune séance précédente', 'var(--orange)'); return }
+    const last = sessions[0]
+    setMuscles(last.muscle ? last.muscle.split('+') : ['Dos'])
+    setExercises((last.exercises||[]).map(e=>({
+      id:Date.now()+Math.random(), name:e.name, unilateral:e.unilateral||false,
+      sets:(e.sets||[]).map((s,i)=>({id:Date.now()+i+Math.random(),r:'',w:'',rL:'',wL:'',rR:'',wR:''}))
+    })))
+    showToast('📋 Dernière séance chargée !', 'var(--blue)')
+  }
+
+  const getExPR = useCallback((name) => {
+    return (userPRs||[]).find(p => normalize(p.exercise) === normalize(name))
+  }, [userPRs])
+
+  function onSetTouchStart(e, exId, setId) {
+    swipeRef2.current = { startX: e.touches[0].clientX, setKey: `${exId}-${setId}` }
+  }
+  function onSetTouchMove(e, exId, setId) {
+    const key = `${exId}-${setId}`
+    if (swipeRef2.current.setKey !== key) return
+    const dx = e.touches[0].clientX - swipeRef2.current.startX
+    if (dx < -5) setSwipeOffset(prev => ({...prev, [key]: Math.max(dx, -100)}))
+  }
+  function onSetTouchEnd(exId, setId) {
+    const key = `${exId}-${setId}`
+    const dx = swipeOffset[key] || 0
+    if (dx < -60) { removeSet(exId, setId); showToast('Série supprimée', 'var(--red)') }
+    setSwipeOffset(prev => { const n = {...prev}; delete n[key]; return n })
+    swipeRef2.current = {startX:0, setKey:null}
+  }
 
   function filterEx(q) {
     setExSearch(q)
@@ -170,20 +236,36 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     setExResults([...all].filter(n => normalize(n).includes(nq)).slice(0,8))
   }
 
-  function getLastPerf(name) {
+  const getLastPerf = useCallback((name) => {
     for (const s of sessions) {
       const ex = (s.exercises||[]).find(e => normalize(e.name) === normalize(name))
       if (ex) return { session: s, exercise: ex }
     }
     return null
-  }
+  }, [sessions])
 
   function addExercise(name) {
     const last = getLastPerf(name)
-    setExercises(prev => [...prev, {
-      id: Date.now(), name,
-      sets: last ? last.exercise.sets.map((s,i) => ({id:Date.now()+i,r:s.r,w:s.w})) : Array(4).fill(null).map((_,i) => ({id:Date.now()+i,r:'',w:''}))
-    }])
+    let newEx
+    if (last) {
+      const prev = last.exercise
+      newEx = {
+        id: Date.now(), name,
+        unilateral: prev.unilateral || false,
+        sets: prev.sets.map((s,i) => ({
+          id: Date.now()+i,
+          r: s.r || '', w: s.w || '',
+          rL: s.rL || '', wL: s.wL || '',
+          rR: s.rR || '', wR: s.wR || '',
+        }))
+      }
+    } else {
+      newEx = {
+        id: Date.now(), name,
+        sets: Array(4).fill(null).map((_,i) => ({id:Date.now()+i,r:'',w:''}))
+      }
+    }
+    setExercises(prev => [...prev, newEx])
     setExSearch(''); setExResults([])
   }
 
@@ -240,10 +322,10 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
   function removeExercise(exId) { setExercises(prev => prev.filter(ex => ex.id!==exId)) }
 
-  const totalVolume = exercises.reduce((a,ex) => isBW(ex.name) ? a : a+ex.sets.reduce((b,st) => {
+  const totalVolume = useMemo(() => exercises.reduce((a,ex) => isBW(ex.name) ? a : a+ex.sets.reduce((b,st) => {
     if (ex.unilateral) return b + (parseFloat(st.rL)||0)*(parseFloat(st.wL)||0) + (parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
     return b + (parseFloat(st.r)||0)*(parseFloat(st.w)||0)
-  }, 0), 0)
+  }, 0), 0), [exercises])
 
   async function checkAndUpdatePRs(exos, sessionDate) {
     for (const ex of exos) {
@@ -522,6 +604,24 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         <hr className="page-divider" />
       </div>
 
+      {/* Raccourci "même séance" */}
+      {exercises.length === 0 && sessions.length > 0 && (
+        <button onClick={loadLastSession} style={{
+          width:'100%',padding:'10px 16px',marginBottom:12,
+          background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:12,
+          display:'flex',alignItems:'center',gap:10,cursor:'pointer',
+          color:'#60a5fa',fontSize:13,fontFamily:'var(--fb)',fontWeight:600,transition:'all .15s',
+        }}>
+          <span style={{fontSize:18}}>🔄</span>
+          <div style={{textAlign:'left'}}>
+            <div>Refaire la dernière séance</div>
+            <div style={{fontSize:11,color:'var(--text3)',fontWeight:400}}>
+              {sessions[0]?.muscle?.split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')} — {(sessions[0]?.exercises||[]).length} exos
+            </div>
+          </div>
+        </button>
+      )}
+
       {/* DATE / HEURE — commun aux deux modes */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
         <div><label className="field-label">Date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
@@ -609,23 +709,25 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           <div key={ex.id} style={{background:'var(--s2)',border:'1px solid var(--border)',borderRadius:14,marginBottom:10,overflow:'hidden'}}>
             <div style={{display:'flex',alignItems:'center',gap:10,padding:'12px 14px',borderBottom:'1px solid var(--border)'}}>
               <div style={{width:26,height:26,borderRadius:8,background:'var(--red)',color:'white',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{exercises.indexOf(ex)+1}</div>
-              <div style={{flex:1,fontSize:14,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>{ex.name}{isBW(ex.name)&&<span style={{fontSize:10,fontWeight:700,background:'rgba(59,130,246,.2)',color:'var(--blue)',borderRadius:4,padding:'2px 6px',letterSpacing:1,flexShrink:0}}>BW</span>}</div>
+              <div style={{flex:1,display:'flex',flexDirection:'column',gap:2}}>
+                <div style={{fontSize:14,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>{ex.name}{isBW(ex.name)&&<span style={{fontSize:10,fontWeight:700,background:'rgba(59,130,246,.2)',color:'var(--blue)',borderRadius:4,padding:'2px 6px',letterSpacing:1,flexShrink:0}}>BW</span>}</div>
+                {(() => { const pr = getExPR(ex.name); return pr ? <div style={{fontSize:11,color:'var(--gold)',fontWeight:600}}>🏆 PR : {pr.weight}kg</div> : null })()}
+              </div>
               <button onClick={()=>removeExercise(ex.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
             </div>
             {last && (
               <div style={{padding:'6px 14px',fontSize:11,color:'var(--text3)',borderBottom:'1px solid var(--border)',display:'flex',gap:8,flexWrap:'wrap'}}>
                 <span>Dernière fois ({new Date(last.session.session_date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit'})}) :</span>
-                {last.exercise.sets.map((st,i)=><span key={i} style={{color:'var(--text2)'}}>{st.r}×{st.w}kg</span>)}
+                {last.exercise.sets.map((st,i)=><span key={i} style={{color:'var(--text2)'}}>{last.exercise.unilateral ? `G:${st.rL||0}×${st.wL||0} D:${st.rR||0}×${st.wR||0}kg` : `${st.r}×${st.w}kg`}</span>)}
               </div>
             )}
             <div style={{padding:'10px 14px'}}>
               {/* Ligne mode unilatéral */}
-              <div onClick={()=>toggleUnilateral(ex.id)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'7px 0',marginBottom:6,cursor:'pointer',borderBottom:'1px solid var(--border)'}}>
-                <div style={{flex:1}}/>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',padding:'7px 0',marginBottom:6,borderBottom:'1px solid var(--border)'}}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   {ex.unilateral && <span style={{fontSize:10,color:'var(--text3)'}}>poids et reps G / D</span>}
                   <span style={{fontSize:12,fontWeight:700,color:ex.unilateral?'var(--orange)':'var(--text2)',fontFamily:'var(--fb)'}}>Mode unilatéral</span>
-                  <div style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0}}>
+                  <div onClick={()=>toggleUnilateral(ex.id)} style={{width:36,height:20,borderRadius:10,background:ex.unilateral?'var(--orange)':'var(--s3)',border:`1px solid ${ex.unilateral?'var(--orange)':'var(--border)'}`,position:'relative',transition:'all .2s',flexShrink:0,cursor:'pointer'}}>
                     <div style={{position:'absolute',top:3,left:ex.unilateral?17:3,width:12,height:12,borderRadius:'50%',background:'white',transition:'all .2s',boxShadow:'0 1px 3px rgba(0,0,0,0.3)'}}/>
                   </div>
                 </div>
@@ -640,9 +742,21 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                   <span/><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Reps</span><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Poids (kg)</span><span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>Vol</span><span/>
                 </div>
               )}
-              {ex.sets.map((st,si)=>(
-                ex.unilateral ? (
-                  <div key={st.id} style={{marginBottom:8}}>
+              {ex.sets.map((st,si)=>{
+                const swKey = `${ex.id}-${st.id}`
+                const sw = swipeOffset[swKey] || 0
+                return (
+                <div key={st.id} style={{position:'relative',overflow:'hidden',marginBottom:ex.unilateral?8:4,borderRadius:6}}>
+                  {sw < -10 && <div style={{position:'absolute',right:0,top:0,bottom:0,width:60,background:'var(--red)',display:'flex',alignItems:'center',justifyContent:'center',borderRadius:'0 6px 6px 0',zIndex:1}}>
+                    <span style={{color:'white',fontWeight:700,fontSize:11}}>🗑</span>
+                  </div>}
+                  <div
+                    onTouchStart={e=>onSetTouchStart(e,ex.id,st.id)}
+                    onTouchMove={e=>onSetTouchMove(e,ex.id,st.id)}
+                    onTouchEnd={()=>onSetTouchEnd(ex.id,st.id)}
+                    style={{transform:`translateX(${sw}px)`,transition:swipeRef2.current.setKey===swKey?'none':'transform .2s',background:'var(--s2)',position:'relative',zIndex:2}}
+                  >
+                  {ex.unilateral ? (<>
                     <div style={{display:'grid',gridTemplateColumns:'22px 1fr 1fr 1fr 1fr 28px',gap:4,alignItems:'center'}}>
                       <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
                       <input type="number" value={st.rL||''} onChange={e=>updateSet(ex.id,st.id,'rL',e.target.value)} placeholder="0" min="0" inputMode="numeric" style={{textAlign:'center',padding:'6px 2px',fontSize:13,borderColor:'var(--orange)',borderWidth:1}}/>
@@ -651,7 +765,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                       <input type="number" value={st.wR||''} onChange={e=>updateSet(ex.id,st.id,'wR',e.target.value)} placeholder="0" min="0" step="0.5" inputMode="decimal" style={{textAlign:'center',padding:'6px 2px',fontSize:13,borderColor:'var(--blue)',borderWidth:1}}/>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
                     </div>
-                    {/* Indicateur déséquilibre */}
                     {(st.rL||st.rR||st.wL||st.wR) && (parseFloat(st.rL)||0)!==(parseFloat(st.rR)||0) && (
                       <div style={{fontSize:10,color:'var(--orange)',textAlign:'center',marginTop:2}}>
                         ⚠️ {(parseFloat(st.rL)||0)>(parseFloat(st.rR)||0)?`G +${(parseFloat(st.rL)||0)-(parseFloat(st.rR)||0)} rep`:`D +${(parseFloat(st.rR)||0)-(parseFloat(st.rL)||0)} rep`}
@@ -662,9 +775,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                         {(parseFloat(st.wL)||0)>(parseFloat(st.wR)||0)?`G +${((parseFloat(st.wL)||0)-(parseFloat(st.wR)||0)).toFixed(1)}kg`:`D +${((parseFloat(st.wR)||0)-(parseFloat(st.wL)||0)).toFixed(1)}kg`}
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div key={st.id} style={{marginBottom:4}}>
+                  </>) : (<>
                     <div style={{display:'grid',gridTemplateColumns:'28px 1fr 1fr 60px 28px',gap:6,marginBottom:2,alignItems:'center'}}>
                       <span style={{fontSize:11,color:'var(--text3)',textAlign:'center'}}>{si+1}</span>
                       {(() => {
@@ -691,9 +802,11 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
                       <span style={{fontSize:12,color: isBW(ex.name)?'var(--blue)':'var(--text3)',textAlign:'center'}}>{isBW(ex.name)?'BW':((ex.unilateral?((parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0)):(parseFloat(st.r)||0)*(parseFloat(st.w)||0))).toLocaleString('fr')}</span>
                       <button onClick={()=>removeSet(ex.id,st.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:14,cursor:'pointer'}}>×</button>
                     </div>
+                  </>)}
                   </div>
+                </div>
                 )
-              ))}
+              })}
               <div style={{display:'flex',gap:8,marginTop:8,flexWrap:'wrap'}}>
                 <button onClick={()=>addSet(ex.id)} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'6px 14px',color:'var(--text2)',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)'}}>＋ Série</button>
                 {[60,90,120,180].map(s=>(
@@ -705,10 +818,23 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         )
       })}
 
+      {/* Floating rest timer bubble */}
       {restLeft > 0 && (
-        <div style={{background:'rgba(34,197,94,.1)',border:'1px solid var(--green)',borderRadius:12,padding:'12px 16px',marginBottom:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-          <span style={{color:'var(--green)',fontFamily:'var(--fm)',fontSize:18,fontWeight:700}}>⏱ {Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2,'0')}</span>
-          <button onClick={()=>setRestLeft(0)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
+        <div style={{
+          position:'fixed',bottom:80,left:'50%',transform:'translateX(-50%)',zIndex:150,
+          background:'rgba(10,10,10,0.95)',border:'1.5px solid var(--green)',borderRadius:50,
+          padding:'10px 20px',display:'flex',alignItems:'center',gap:12,
+          boxShadow:'0 8px 32px rgba(34,197,94,0.3)',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
+        }}>
+          <div style={{width:10,height:10,borderRadius:'50%',background:'var(--green)',animation:'pulse 1s infinite'}}/>
+          <span style={{color:'var(--green)',fontFamily:'var(--fm)',fontSize:22,fontWeight:700,letterSpacing:1}}>
+            {Math.floor(restLeft / 60)}:{String(restLeft % 60).padStart(2,'0')}
+          </span>
+          <button onClick={()=>setRestLeft(0)} style={{
+            background:'rgba(255,255,255,0.1)',border:'none',borderRadius:'50%',
+            width:28,height:28,color:'var(--text2)',fontSize:16,cursor:'pointer',
+            display:'flex',alignItems:'center',justifyContent:'center',
+          }}>×</button>
         </div>
       )}
 

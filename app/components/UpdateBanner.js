@@ -27,7 +27,9 @@ export default function UpdateBanner() {
 
   function goToProfile() {
     dismiss(true)
-    actions.setCurrentPage('sante')
+    actions.setCurrentPage('profil')
+    // Signal ProfilPage to open Santé tab
+    window.dispatchEvent(new CustomEvent('lt-open-tab', { detail: 'sante' }))
   }
 
   if (!visible) return null

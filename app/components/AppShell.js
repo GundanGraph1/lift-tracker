@@ -67,6 +67,8 @@ export default function AppShell() {
           })
       }
     }
+    // Register service worker for push notifications
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{})
     const savedPage = localStorage.getItem('lt_page')
     if (savedPage && NAV.find(n => n.key === savedPage)) actions.setCurrentPage(savedPage)
     else actions.setCurrentPage('saisie')
@@ -74,9 +76,10 @@ export default function AppShell() {
     applyTheme(themeKey, fontKey)
     loadAll()
     const handleOnline = () => { setIsOnline(true); syncOffline() }
+    const handleOffline = () => setIsOnline(false)
     window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', () => setIsOnline(false))
-    return () => window.removeEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => { window.removeEventListener('online', handleOnline); window.removeEventListener('offline', handleOffline) }
   }, [currentUser?.id])
 
   async function loadAll() {
@@ -110,19 +113,30 @@ export default function AppShell() {
     try { return JSON.parse(localStorage.getItem('lt_offline_sessions')||'[]') } catch { return [] }
   }
   function saveOfflineSession(s) {
-    const arr = getOfflineSessions(); arr.push({...s, _offlineId: Date.now()})
+    const arr = getOfflineSessions(); arr.push({...s, _offlineId: Date.now(), _retries: 0})
     localStorage.setItem('lt_offline_sessions', JSON.stringify(arr))
   }
   function clearOfflineSession(id) {
     localStorage.setItem('lt_offline_sessions', JSON.stringify(getOfflineSessions().filter(s=>s._offlineId!==id)))
   }
+  function markRetry(id) {
+    const arr = getOfflineSessions().map(s => s._offlineId===id ? {...s, _retries:(s._retries||0)+1} : s)
+    localStorage.setItem('lt_offline_sessions', JSON.stringify(arr))
+  }
   async function syncOffline() {
     const arr = getOfflineSessions(); if (!arr.length) return
+    let synced = 0
     for (const s of arr) {
+      if ((s._retries||0) >= 5) continue // skip after 5 failed retries
       try {
         const { error } = await db.from('sessions').insert([{user_id:currentUser.id,session_date:s.date,session_time:s.time||'',muscle:s.muscle,notes:s.notes||'',exercises:JSON.stringify(s.exercises),total_volume:s.totalVolume}])
-        if (!error) clearOfflineSession(s._offlineId)
-      } catch(e) {}
+        if (!error) { clearOfflineSession(s._offlineId); synced++ }
+        else markRetry(s._offlineId)
+      } catch(e) { markRetry(s._offlineId) }
+    }
+    if (synced > 0) {
+      const { showToast } = await import('./Toast')
+      showToast(`✅ ${synced} séance${synced>1?'s':''} synchronisée${synced>1?'s':''}`, 'var(--green)')
     }
     loadAll()
   }
@@ -167,6 +181,13 @@ export default function AppShell() {
       {!isOnline && (
         <div style={{background:'rgba(255,150,0,.12)',border:'1px solid rgba(255,150,0,.3)',borderRadius:10,padding:'8px 14px',margin:'8px 16px',display:'flex',alignItems:'center',gap:8,fontSize:12,color:'var(--orange)'}}>
           <span>📵</span><span>Mode hors ligne — séance sauvegardée localement</span>
+        </div>
+      )}
+      {/* Offline sync queue */}
+      {isOnline && getOfflineSessions().length > 0 && (
+        <div style={{background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:10,padding:'8px 14px',margin:'8px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',fontSize:12}}>
+          <span style={{color:'#60a5fa'}}> {getOfflineSessions().length} séance{getOfflineSessions().length>1?'s':''} en attente de sync</span>
+          <button onClick={syncOffline} style={{background:'rgba(59,130,246,.2)',border:'1px solid rgba(59,130,246,.4)',borderRadius:8,padding:'4px 10px',color:'#60a5fa',fontSize:11,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:700}}>↺ Sync</button>
         </div>
       )}
 

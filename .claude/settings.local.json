@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm:*)",
+      "Bash(ls C:/Users/kelli/lift-tracker/postcss.config* C:/Users/kelli/lift-tracker/tailwind.config*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(unzip -o \"C:/Users/kelli/Downloads/favicon \\(2\\).zip\" -d /tmp/favicon_extract)",
+      "Read(//tmp/**)",
+      "Bash(cp /tmp/favicon_extract/favicon.ico C:/Users/kelli/lift-tracker/app/favicon.ico)",
+      "Bash(cp /tmp/favicon_extract/favicon.svg C:/Users/kelli/lift-tracker/app/favicon.svg)",
+      "Bash(cp /tmp/favicon_extract/favicon-96x96.png C:/Users/kelli/lift-tracker/public/favicon-96x96.png)",
+      "Bash(cp /tmp/favicon_extract/apple-touch-icon.png C:/Users/kelli/lift-tracker/public/apple-touch-icon.png)",
+      "Bash(cp /tmp/favicon_extract/web-app-manifest-192x192.png C:/Users/kelli/lift-tracker/public/web-app-manifest-192x192.png)"
+    ]
+  }
+}

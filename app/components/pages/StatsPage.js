@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { MUSCLE_COLORS, getMuscleColor, getMuscleLabel, BADGES, normalize } from '../../../lib/constants'
+import { MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, getMuscleLabel, BADGES, normalize } from '../../../lib/constants'
 import { showToast } from '../Toast'
 import { showBadgeUnlock } from '../BadgeUnlock'
 
@@ -68,25 +68,29 @@ export default function StatsPage() {
   }
 
   // Stats
-  const totalVol = sessions.reduce((a,s)=>a+(s.total_volume||0),0)
-  const avgVol = sessions.length ? totalVol/sessions.length : 0
-  const maxVol = sessions.length ? Math.max(...sessions.map(s=>s.total_volume||0)) : 0
+  const totalVol = useMemo(() => sessions.reduce((a,s)=>a+(s.total_volume||0),0), [sessions])
+  const avgVol = useMemo(() => sessions.length ? totalVol/sessions.length : 0, [totalVol, sessions.length])
+  const maxVol = useMemo(() => sessions.length ? Math.max(...sessions.map(s=>s.total_volume||0)) : 0, [sessions])
   // Last 10 DAYS (including rest days)
-  const today = new Date()
-  const last10Days = Array.from({length:10},(_,i)=>{
-    const d = new Date(today); d.setDate(d.getDate()-(9-i))
-    const dateStr = d.toISOString().split('T')[0]
-    const daySessions = sessions.filter(s=>s.session_date===dateStr)
-    return { dateStr, sessions: daySessions, isRest: daySessions.length===0 }
-  })
-  const maxBar = Math.max(...last10Days.map(d=>d.sessions.reduce((a,s)=>a+(s.total_volume||0),0)),1)
+  const last10Days = useMemo(() => {
+    const today = new Date()
+    return Array.from({length:10},(_,i)=>{
+      const d = new Date(today); d.setDate(d.getDate()-(9-i))
+      const dateStr = d.toISOString().split('T')[0]
+      const daySessions = sessions.filter(s=>s.session_date===dateStr)
+      return { dateStr, sessions: daySessions, isRest: daySessions.length===0 }
+    })
+  }, [sessions])
+  const maxBar = useMemo(() => Math.max(...last10Days.map(d=>d.sessions.reduce((a,s)=>a+(s.total_volume||0),0)),1), [last10Days])
 
-  const priority = ['Développé Couché (Bench Press)','Bench Press','Squat','Deadlift','Soulevé de terre (Deadlift)']
-  const sortedPRs = [...(userPRs||[])].sort((a,b)=>{
-    const ai=priority.findIndex(p=>normalize(p)===normalize(a.exercise))
-    const bi=priority.findIndex(p=>normalize(p)===normalize(b.exercise))
-    if(ai>=0&&bi<0) return -1; if(bi>=0&&ai<0) return 1; if(ai>=0&&bi>=0) return ai-bi; return 0
-  })
+  const sortedPRs = useMemo(() => {
+    const priority = ['Développé Couché (Bench Press)','Bench Press','Squat','Deadlift','Soulevé de terre (Deadlift)']
+    return [...(userPRs||[])].sort((a,b)=>{
+      const ai=priority.findIndex(p=>normalize(p)===normalize(a.exercise))
+      const bi=priority.findIndex(p=>normalize(p)===normalize(b.exercise))
+      if(ai>=0&&bi<0) return -1; if(bi>=0&&ai<0) return 1; if(ai>=0&&bi>=0) return ai-bi; return 0
+    })
+  }, [userPRs])
 
   function filterProgSearch(q) {
     setProgSearch(q)
@@ -98,7 +102,7 @@ export default function StatsPage() {
     setProgResults([...names].filter(n=>normalize(n).includes(nq)).slice(0,6))
   }
 
-  function getMuscleProgData(muscle) {
+  const getMuscleProgData = useCallback(function(muscle) {
     const pts = []
     const sorted = [...sessions].sort((a,b)=>a.session_date.localeCompare(b.session_date))
     for (const s of sorted) {
@@ -107,9 +111,9 @@ export default function StatsPage() {
       if (vol > 0) pts.push({ date: s.session_date, w: vol })
     }
     return pts
-  }
+  }, [sessions])
 
-  function getProgData(name) {
+  const getProgData = useCallback(function(name) {
     const pts = []
     for (const s of [...sessions].reverse()) {
       const ex = (s.exercises||[]).find(e=>normalize(e.name)===normalize(name))
@@ -119,7 +123,7 @@ export default function StatsPage() {
       }
     }
     return pts
-  }
+  }, [sessions])
 
   const progData = progEx ? getProgData(progEx) : []
   const maxW = progData.length ? Math.max(...progData.map(p=>p.w)) : 1
@@ -248,9 +252,25 @@ export default function StatsPage() {
 
       {/* Progression chart */}
       <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
-        <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>📈 Progression par exercice</div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>📈 Progression</div>
+          <div style={{display:'flex',gap:4}}>
+            <button onClick={()=>setProgMode('exercise')} style={{padding:'4px 10px',fontSize:11,fontWeight:700,borderRadius:8,border:'none',cursor:'pointer',fontFamily:'var(--fb)',background:progMode==='exercise'?'var(--red)':'var(--s3)',color:progMode==='exercise'?'white':'var(--text3)'}}>Par exercice</button>
+            <button onClick={()=>setProgMode('muscle')} style={{padding:'4px 10px',fontSize:11,fontWeight:700,borderRadius:8,border:'none',cursor:'pointer',fontFamily:'var(--fb)',background:progMode==='muscle'?'var(--red)':'var(--s3)',color:progMode==='muscle'?'white':'var(--text3)'}}>Par muscle</button>
+          </div>
+        </div>
+
+        {progMode==='muscle' && (
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
+            {Object.keys(MUSCLE_COLORS||{}).length > 0 && MUSCLE_GROUPS.map(m => (
+              <button key={m} onClick={()=>setProgMuscle(m)} style={{padding:'5px 10px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${progMuscle===m?'var(--red)':'var(--border)'}`,cursor:'pointer',fontFamily:'var(--fb)',background:progMuscle===m?'var(--red)':'var(--s3)',color:progMuscle===m?'white':'var(--text2)'}}>{getMuscleLabel(m)||m}</button>
+            ))}
+          </div>
+        )}
+
+        {progMode==='exercise' && (<>
         <div className="ex-search-wrap" style={{marginBottom:8}}>
-          
+          <span>🔍</span>
           <input className="ex-search-input" value={progSearch} onChange={e=>filterProgSearch(e.target.value)} placeholder="Cherche un exercice..." />
         </div>
         {progResults.length>0&&(
@@ -258,7 +278,50 @@ export default function StatsPage() {
             {progResults.map(n=><div key={n} className="ex-result-item" onClick={()=>{setProgEx(n);setProgSearch(n);setProgResults([])}}>{n}</div>)}
           </div>
         )}
-        {progEx && (() => {
+        </>)}
+
+        {/* Muscle progression chart */}
+        {progMode==='muscle' && progMuscle && (() => {
+          const mData = getMuscleProgData(progMuscle)
+          if (!mData.length) return <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:20}}>Aucune donnée pour ce muscle</div>
+          const mx=Math.max(...mData.map(p=>p.w))
+          const mn=Math.min(...mData.map(p=>p.w))
+          const range=mx-mn||1
+          const PW=Math.max(320,mData.length*70)
+          const PH=150,padT=32,padB=28,padL=20,padR=20
+          const cW=PW-padL-padR,cH=PH-padT-padB
+          const gx=i=>padL+(mData.length===1?cW/2:i*(cW/(mData.length-1)))
+          const gy=v=>padT+cH-((v-mn)/range)*cH
+          const color = getMuscleColor(progMuscle)||'var(--red)'
+          return (
+            <div style={{overflowX:'auto',marginTop:8,background:'var(--s2)',borderRadius:12,padding:'8px 0'}}>
+              <svg width={PW} height={PH} style={{display:'block'}}>
+                {[0,0.5,1].map((f,i)=><line key={i} x1={padL} x2={PW-padR} y1={padT+cH*f} y2={padT+cH*f} stroke="rgba(255,255,255,0.05)" strokeWidth="1"/>)}
+                {mData.length>1&&<polygon
+                  points={[...mData.map((_,i)=>`${gx(i)},${gy(mData[i].w)}`),`${gx(mData.length-1)},${padT+cH}`,`${gx(0)},${padT+cH}`].join(' ')}
+                  fill={`${color}11`}
+                />}
+                {mData.length>1&&<polyline
+                  points={mData.map((p,i)=>`${gx(i)},${gy(p.w)}`).join(' ')}
+                  fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"
+                />}
+                {mData.map((p,i)=>{
+                  const x=gx(i),y=gy(p.w),isMax=p.w===mx
+                  return (
+                    <g key={i}>
+                      <circle cx={x} cy={y} r={isMax?7:5} fill={isMax?'#fbbf24':color} stroke="#111" strokeWidth="1.5"/>
+                      <text x={x} y={y-12} textAnchor="middle" fill={isMax?'#fbbf24':'rgba(255,255,255,0.75)'} fontSize="11" fontWeight="700">{p.w>=1000?(p.w/1000).toFixed(1)+'t':Math.round(p.w)+'kg'}</text>
+                      <text x={x} y={PH-6} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="9">{p.date.slice(5).replace('-','/')}</text>
+                    </g>
+                  )
+                })}
+              </svg>
+            </div>
+          )
+        })()}
+
+        {/* Exercise progression chart */}
+        {progMode==='exercise' && progEx && (() => {
           if (progData.length===0) return <div style={{fontSize:13,color:'var(--text3)',textAlign:'center',padding:20}}>Aucune donnée pour cet exercice</div>
           const mx=Math.max(...progData.map(p=>p.w))
           const mn=Math.min(...progData.map(p=>p.w))

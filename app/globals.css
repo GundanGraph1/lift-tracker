@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #131210;
-  --s1: #1a1917;
-  --s2: #211f1d;
-  --s3: #2a2825;
-  --border: #2e2c29;
-  --border2: #3a3835;
-  --text: #f3eae3;
-  --text2: #d0c8c3;
-  --text3: #6b6560;
+  --bg: #0f0e0c;
+  --s1: #181715;
+  --s2: #1f1d1b;
+  --s3: #2a2826;
+  --border: #322f2b;
+  --border2: #3e3b37;
+  --text: #f5ede6;
+  --text2: #c8bfb8;
+  --text3: #7d756e;
   --red: #ff073b;
   --green: #22c55e;
   --blue: #3b82f6;
@@ -172,39 +172,7 @@ input[type="date"], input[type="time"] { color-scheme: dark; }
 .sync-dot.err { background: var(--red); }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-/* ── PAGE TITLES ── */
-.page-title {
-  font-family: var(--fm);
-  font-size: 48px;
-  font-weight: 800;
-  letter-spacing: 3px;
-  color: var(--red);
-  text-transform: uppercase;
-  line-height: 1;
-}
-.page-sub {
-  font-size: 11px;
-  color: var(--text3);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-top: 4px;
-}
-.page-divider {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin-top: 14px;
-}
-
-/* ── LABELS ── */
-.field-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-bottom: 6px;
-}
+/* (page-title, page-sub, page-divider, field-label defined below) */
 
 /* ── BUTTONS ── */
 .btn-primary {

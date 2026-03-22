@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, getMuscleLabel, BADGES, normalize, exerciseBelongsToMuscle, ALL_EXERCISES } from '../../../lib/constants'
+import { MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, getMuscleLabel, BADGES, normalize, exerciseBelongsToMuscle, ALL_EXERCISES, isBW } from '../../../lib/constants'
 import { showToast } from '../Toast'
 import { showBadgeUnlock } from '../BadgeUnlock'
 
@@ -111,11 +111,16 @@ export default function StatsPage() {
       let vol = 0
       for (const ex of (s.exercises||[])) {
         if (!exerciseBelongsToMuscle(ex.name, muscle, customExercises)) continue
-        vol += ex.sets.reduce((b,st) => b + (
-          ex.unilateral
-            ? (parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0) + (parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0)
-            : (parseFloat(st.r)||0)*(parseFloat(st.w)||0)
-        ), 0)
+        vol += ex.sets.reduce((b,st) => {
+          if (ex.unilateral) {
+            const wL=parseFloat(st.wL||st.w)||0, wR=parseFloat(st.wR||st.w)||0
+            if (isBW(ex.name) && wL===0 && wR===0) return b
+            return b+(parseFloat(st.rL||st.r)||0)*wL+(parseFloat(st.rR||st.r)||0)*wR
+          }
+          const w=parseFloat(st.w)||0
+          if (isBW(ex.name) && w===0) return b
+          return b+(parseFloat(st.r)||0)*w
+        }, 0)
       }
       if (vol > 0) pts.push({ date: s.session_date, w: vol })
     }

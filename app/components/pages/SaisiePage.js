@@ -2,14 +2,10 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, MUSCLE_SHORTCUTS, normalize, getExerciseMuscles } from '../../../lib/constants'
+import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, MUSCLE_SHORTCUTS, normalize, getExerciseMuscles, isBW } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 
-const BW_EXERCISES = ['Pompes', 'Push-Up Lesté']
-
-
-const isBW = (name) => BW_EXERCISES.some(bw => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest'))
 
 export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const sessions = useStore(s => s.sessions)
@@ -337,9 +333,15 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
   function removeExercise(exId) { setExercises(prev => prev.filter(ex => ex.id!==exId)) }
 
-  const totalVolume = useMemo(() => exercises.reduce((a,ex) => isBW(ex.name) ? a : a+ex.sets.reduce((b,st) => {
-    if (ex.unilateral) return b + (parseFloat(st.rL)||0)*(parseFloat(st.wL)||0) + (parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
-    return b + (parseFloat(st.r)||0)*(parseFloat(st.w)||0)
+  const totalVolume = useMemo(() => exercises.reduce((a,ex) => a+ex.sets.reduce((b,st) => {
+    if (ex.unilateral) {
+      const wL = parseFloat(st.wL)||0, wR = parseFloat(st.wR)||0
+      if (isBW(ex.name) && wL===0 && wR===0) return b
+      return b + (parseFloat(st.rL)||0)*wL + (parseFloat(st.rR)||0)*wR
+    }
+    const w = parseFloat(st.w)||0
+    if (isBW(ex.name) && w===0) return b
+    return b + (parseFloat(st.r)||0)*w
   }, 0), 0), [exercises])
 
   async function checkAndUpdatePRs(exos, sessionDate) {
@@ -709,6 +711,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
               <div style={{flex:1,display:'flex',flexDirection:'column',gap:2}}>
                 <div style={{fontSize:14,fontWeight:600,display:'flex',alignItems:'center',gap:6}}>{ex.name}{isBW(ex.name)&&<span style={{fontSize:10,fontWeight:700,background:'rgba(59,130,246,.2)',color:'var(--blue)',borderRadius:4,padding:'2px 6px',letterSpacing:1,flexShrink:0}}>BW</span>}</div>
                 {(() => { const pr = getExPR(ex.name); return pr ? <div style={{fontSize:11,color:'var(--gold)',fontWeight:600}}>🏆 PR : {pr.weight}kg</div> : null })()}
+                {isBW(ex.name) && <div style={{fontSize:10,color:'var(--text3)',fontStyle:'italic'}}>Poids de corps — entre le lest si applicable</div>}
               </div>
               <button onClick={()=>removeExercise(ex.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:18,cursor:'pointer'}}>×</button>
             </div>

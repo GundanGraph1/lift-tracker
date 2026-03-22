@@ -1,11 +1,9 @@
 'use client'
-const isBW = (name) => (name||'').toLowerCase().includes('pompe') && !(name||'').toLowerCase().includes('lest')
-
 import { useState, useMemo } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore } from '../../../lib/store'
 import ShareStory from '../ShareStory'
-import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, normalize } from '../../../lib/constants'
+import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, normalize, isBW } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 export default function HistoriquePage({ onChanged }) {
@@ -98,8 +96,14 @@ export default function HistoriquePage({ onChanged }) {
     if (!editSession) return
     setSaving(true)
     const totalVolume = editSession.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>{
-      if (e.unilateral) return b+(parseFloat(st.rL)||0)*(parseFloat(st.wL)||0)+(parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
-      return b+(e.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0))
+      if (e.unilateral) {
+        const wL=parseFloat(st.wL)||0, wR=parseFloat(st.wR)||0
+        if (isBW(e.name) && wL===0 && wR===0) return b
+        return b+(parseFloat(st.rL)||0)*wL+(parseFloat(st.rR)||0)*wR
+      }
+      const w=parseFloat(st.w)||0
+      if (isBW(e.name) && w===0) return b
+      return b+(parseFloat(st.r)||0)*w
     },0),0)
     const { error } = await db.from('sessions').update({
       session_date: editSession.session_date,
@@ -243,7 +247,8 @@ export default function HistoriquePage({ onChanged }) {
               <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:8}}>
                 {(s.exercises||[]).map((e,i) => {
                   const maxW = e.sets.length?Math.max(...e.sets.map(st=>e.unilateral?(Math.max(parseFloat(st.wL)||0,parseFloat(st.wR)||0)):(parseFloat(st.w)||0))):0
-                  return <div key={i} style={{background:'var(--s3)',borderRadius:8,padding:'4px 10px',fontSize:12,color:'var(--text2)'}}>{e.name} <span style={{color:'var(--text)',fontWeight:600}}>{maxW}kg</span></div>
+                  const bw = isBW(e.name)
+                  return <div key={i} style={{background:'var(--s3)',borderRadius:8,padding:'4px 10px',fontSize:12,color:'var(--text2)'}}>{bw && maxW > 0 ? '🏋️ ' : ''}{e.name} <span style={{color:'var(--text)',fontWeight:600}}>{bw ? (maxW > 0 ? `+${maxW}kg` : 'BW') : `${maxW}kg`}</span></div>
                 })}
               </div>
               <div style={{display:'flex',gap:8}}>

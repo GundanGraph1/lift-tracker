@@ -19,7 +19,8 @@ self.addEventListener('activate', (e) => {
 // Network-first strategy for pages, cache-first for static assets
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url)
-  // Skip non-GET and Supabase API calls
+  // Skip non-http(s) schemes (chrome-extension://, etc.), non-GET, and Supabase API calls
+  if (!url.protocol.startsWith('http')) return
   if (e.request.method !== 'GET' || url.hostname.includes('supabase')) return
 
   // Static assets: cache-first

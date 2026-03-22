@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, MUSCLE_SHORTCUTS, normalize } from '../../../lib/constants'
+import { ALL_EXERCISES, MUSCLE_LABELS, MUSCLE_GROUPS, MUSCLE_SHORTCUTS, normalize, getExerciseMuscles } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 
@@ -49,6 +49,8 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [showMuscleDetail, setShowMuscleDetail] = useState(false) // accordion groupes fins
   const [editPresetName, setEditPresetName] = useState('')
   const [newExMuscle, setNewExMuscle] = useState('') // muscle group for custom exercise creation
+  const [muscleAssignPopup, setMuscleAssignPopup] = useState(null) // {name, customExId} — popup to assign muscle group to existing custom exercise
+  const [muscleAssignChoice, setMuscleAssignChoice] = useState('')
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 })
@@ -244,6 +246,25 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     }
     setExercises(prev => [...prev, newEx])
     setExSearch(''); setExResults([])
+    // Check if this is a custom exercise without muscle_group assigned
+    const muscles = getExerciseMuscles(name, customExercises)
+    if (muscles.length === 0) {
+      const ce = (customExercises||[]).find(c => normalize(c.name) === normalize(name))
+      if (ce && !ce.muscle_group) {
+        setMuscleAssignPopup({ name: ce.name, customExId: ce.id })
+        setMuscleAssignChoice('')
+      }
+    }
+  }
+
+  async function saveMuscleAssign() {
+    if (!muscleAssignPopup || !muscleAssignChoice) return
+    const { customExId } = muscleAssignPopup
+    await db.from('custom_exercises').update({ muscle_group: muscleAssignChoice }).eq('id', customExId)
+    actions.setCustomExercises((customExercises||[]).map(e => e.id === customExId ? { ...e, muscle_group: muscleAssignChoice } : e))
+    showToast('✅ Groupe musculaire enregistré !', 'var(--green)')
+    setMuscleAssignPopup(null)
+    setMuscleAssignChoice('')
   }
 
   async function createAndAddExercise(name, muscleGroup) {
@@ -1068,6 +1089,33 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
       )}
       </div>
     )}
+      {/* Popup: assigner un groupe musculaire à un exercice custom existant */}
+      {muscleAssignPopup && (
+        <div className="modal-overlay open" onClick={e => e.target === e.currentTarget && setMuscleAssignPopup(null)}>
+          <div className="modal">
+            <div className="modal-title">💪 GROUPE MUSCULAIRE</div>
+            <div style={{fontSize:13,color:'var(--text2)',marginBottom:12}}>
+              Quel groupe musculaire pour <strong>{muscleAssignPopup.name}</strong> ?
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:16}}>
+              {MUSCLE_GROUPS.map(m => (
+                <button key={m} onClick={() => setMuscleAssignChoice(m)} style={{
+                  padding:'6px 12px',fontSize:12,fontWeight:600,borderRadius:8,
+                  border:`1px solid ${muscleAssignChoice === m ? 'var(--red)' : 'var(--border)'}`,
+                  cursor:'pointer',fontFamily:'var(--fb)',
+                  background:muscleAssignChoice === m ? 'var(--red)' : 'var(--s3)',
+                  color:muscleAssignChoice === m ? 'white' : 'var(--text2)',
+                  transition:'all .15s'
+                }}>{MUSCLE_LABELS[m] || m}</button>
+              ))}
+            </div>
+            <button className="btn-primary" onClick={saveMuscleAssign} disabled={!muscleAssignChoice}>
+              {muscleAssignChoice ? '✅ Enregistrer' : 'Choisis un groupe'}
+            </button>
+            <button className="btn-secondary" onClick={() => setMuscleAssignPopup(null)} style={{marginTop:8}}>Passer</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 

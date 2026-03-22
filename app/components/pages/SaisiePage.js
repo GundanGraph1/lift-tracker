@@ -246,14 +246,28 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     }
     setExercises(prev => [...prev, newEx])
     setExSearch(''); setExResults([])
-    // Check if this is a custom exercise without muscle_group assigned
+    // Check if this exercise has no muscle group mapping
     const muscles = getExerciseMuscles(name, customExercises)
     if (muscles.length === 0) {
       const ce = (customExercises||[]).find(c => normalize(c.name) === normalize(name))
       if (ce && !ce.muscle_group) {
+        // Exists in custom_exercises but no muscle_group
         setMuscleAssignPopup({ name: ce.name, customExId: ce.id })
         setMuscleAssignChoice('')
+      } else if (!ce) {
+        // Not in custom_exercises at all and not in built-in list → create entry then ask
+        createCustomThenAskMuscle(name)
       }
+    }
+  }
+
+  async function createCustomThenAskMuscle(name) {
+    // Create in custom_exercises without muscle_group, then show popup
+    const { data } = await db.from('custom_exercises').insert([{ user_id: currentUser.id, name: name.trim() }]).select()
+    if (data && data[0]) {
+      actions.setCustomExercises([...(customExercises||[]), data[0]])
+      setMuscleAssignPopup({ name: data[0].name, customExId: data[0].id })
+      setMuscleAssignChoice('')
     }
   }
 

@@ -48,6 +48,7 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
   const [activePreset, setActivePreset] = useState(null) // preset chargé pour cette séance
   const [showMuscleDetail, setShowMuscleDetail] = useState(false) // accordion groupes fins
   const [editPresetName, setEditPresetName] = useState('')
+  const [newExMuscle, setNewExMuscle] = useState('') // muscle group for custom exercise creation
   const [dragIdx, setDragIdx] = useState(null)
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 })
@@ -193,17 +194,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
   function startRest(secs) { clearInterval(restRef.current); restEndRef.current = Date.now() + secs * 1000; setRestLeft(secs); setRestTimer(secs) }
 
-  function loadLastSession() {
-    if (!sessions.length) { showToast('Aucune séance précédente', 'var(--orange)'); return }
-    const last = sessions[0]
-    setMuscles(last.muscle ? last.muscle.split('+') : ['Dos'])
-    setExercises((last.exercises||[]).map(e=>({
-      id:Date.now()+Math.random(), name:e.name, unilateral:e.unilateral||false,
-      sets:(e.sets||[]).map((s,i)=>({id:Date.now()+i+Math.random(),r:'',w:'',rL:'',wL:'',rR:'',wR:''}))
-    })))
-    showToast('📋 Dernière séance chargée !', 'var(--blue)')
-  }
-
   const getExPR = useCallback((name) => {
     return (userPRs||[]).find(p => normalize(p.exercise) === normalize(name))
   }, [userPRs])
@@ -256,14 +246,17 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
     setExSearch(''); setExResults([])
   }
 
-  async function createAndAddExercise(name) {
+  async function createAndAddExercise(name, muscleGroup) {
     if (!name.trim()) return
-    // Save to custom_exercises table
-    const { data } = await db.from('custom_exercises').insert([{user_id: currentUser.id, name: name.trim()}]).select()
+    if (!muscleGroup) { showToast('Choisis un groupe musculaire !', 'var(--orange)'); return }
+    // Save to custom_exercises table with muscle group
+    const row = { user_id: currentUser.id, name: name.trim(), muscle_group: muscleGroup }
+    const { data } = await db.from('custom_exercises').insert([row]).select()
     if (data && data[0]) {
       actions.setCustomExercises([...(customExercises||[]), data[0]])
     }
     addExercise(name.trim())
+    setNewExMuscle('')
     showToast('✅ Exercice créé !')
   }
 
@@ -591,24 +584,6 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
         <hr className="page-divider" />
       </div>
 
-      {/* Raccourci "même séance" */}
-      {exercises.length === 0 && sessions.length > 0 && (
-        <button onClick={loadLastSession} style={{
-          width:'100%',padding:'10px 16px',marginBottom:12,
-          background:'rgba(59,130,246,0.08)',border:'1px solid rgba(59,130,246,0.2)',borderRadius:12,
-          display:'flex',alignItems:'center',gap:10,cursor:'pointer',
-          color:'#60a5fa',fontSize:13,fontFamily:'var(--fb)',fontWeight:600,transition:'all .15s',
-        }}>
-          <span style={{fontSize:18}}>🔄</span>
-          <div style={{textAlign:'left'}}>
-            <div>Refaire la dernière séance</div>
-            <div style={{fontSize:11,color:'var(--text3)',fontWeight:400}}>
-              {sessions[0]?.muscle?.split('+').map(m=>MUSCLE_LABELS[m]||m).join(' + ')} — {(sessions[0]?.exercises||[]).length} exos
-            </div>
-          </div>
-        </button>
-      )}
-
       {/* DATE / HEURE — commun aux deux modes */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
         <div><label className="field-label">Date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} /></div>
@@ -855,11 +830,17 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
           </div>
         )}
         {exSearch.length > 1 && exResults.length === 0 && (
-          <div style={{marginTop:6,padding:'8px 12px',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <span style={{fontSize:12,color:'var(--text2)'}}>Exercice introuvable</span>
-            <button onClick={()=>createAndAddExercise(exSearch)}
-              style={{background:'rgba(59,130,246,.2)',border:'1px solid rgba(59,130,246,.4)',borderRadius:8,padding:'5px 12px',color:'#60a5fa',fontSize:12,cursor:'pointer',fontFamily:'var(--fb)',fontWeight:700}}>
-              ➕ Créer "{exSearch}"
+          <div style={{marginTop:6,padding:'10px 12px',background:'rgba(59,130,246,.08)',border:'1px solid rgba(59,130,246,.2)',borderRadius:10}}>
+            <div style={{fontSize:12,color:'var(--text2)',marginBottom:8}}>Exercice introuvable — choisis un groupe musculaire :</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:8}}>
+              {MUSCLE_GROUPS.map(m=>(
+                <button key={m} onClick={()=>setNewExMuscle(m)} style={{padding:'4px 8px',fontSize:10,fontWeight:600,borderRadius:6,border:`1px solid ${newExMuscle===m?'var(--blue)':'var(--border)'}`,cursor:'pointer',fontFamily:'var(--fb)',background:newExMuscle===m?'rgba(59,130,246,.2)':'var(--s3)',color:newExMuscle===m?'#60a5fa':'var(--text3)'}}>{MUSCLE_LABELS[m]||m}</button>
+              ))}
+            </div>
+            <button onClick={()=>createAndAddExercise(exSearch, newExMuscle)}
+              disabled={!newExMuscle}
+              style={{background:newExMuscle?'rgba(59,130,246,.2)':'var(--s3)',border:`1px solid ${newExMuscle?'rgba(59,130,246,.4)':'var(--border)'}`,borderRadius:8,padding:'5px 12px',color:newExMuscle?'#60a5fa':'var(--text3)',fontSize:12,cursor:newExMuscle?'pointer':'not-allowed',fontFamily:'var(--fb)',fontWeight:700,opacity:newExMuscle?1:0.5}}>
+              ➕ Créer &quot;{exSearch}&quot;
             </button>
           </div>
         )}

@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore, actions } from '../../../lib/store'
-import { MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, getMuscleLabel, BADGES, normalize } from '../../../lib/constants'
+import { MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, getMuscleLabel, BADGES, normalize, exerciseBelongsToMuscle, ALL_EXERCISES } from '../../../lib/constants'
 import { showToast } from '../Toast'
 import { showBadgeUnlock } from '../BadgeUnlock'
 
@@ -11,6 +11,7 @@ export default function StatsPage() {
   const userPRs = useStore(s => s.userPRs)
   const userBadges = useStore(s => s.userBadges)
   const currentUser = useStore(s => s.currentUser)
+  const customExercises = useStore(s => s.customExercises)
   const [showPRModal, setShowPRModal] = useState(false)
   const [prExercise, setPrExercise] = useState('')
   const [prWeight, setPrWeight] = useState('')
@@ -22,8 +23,8 @@ export default function StatsPage() {
   const [progEx, setProgEx] = useState('')
   const [progSearch, setProgSearch] = useState('')
   const [progResults, setProgResults] = useState([])
-  const [progMode, setProgMode] = useState('exercise') // 'exercise' | 'muscle'
-  const [progMuscle, setProgMuscle] = useState('')
+  const [progMode, setProgMode] = useState('muscle') // 'exercise' | 'muscle'
+  const [progMuscle, setProgMuscle] = useState('Pectoraux')
 
   useEffect(() => { checkBadges() }, [sessions, userPRs])
 
@@ -106,12 +107,20 @@ export default function StatsPage() {
     const pts = []
     const sorted = [...sessions].sort((a,b)=>a.session_date.localeCompare(b.session_date))
     for (const s of sorted) {
-      if (!(s.muscle||'').split('+').includes(muscle)) continue
-      const vol = (s.exercises||[]).reduce((a,ex)=>a+ex.sets.reduce((b,st)=>b+(ex.unilateral?(parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0)+(parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0):(parseFloat(st.r)||0)*(parseFloat(st.w)||0)),0),0)
+      // Sum volume only from exercises that belong to this muscle group
+      let vol = 0
+      for (const ex of (s.exercises||[])) {
+        if (!exerciseBelongsToMuscle(ex.name, muscle, customExercises)) continue
+        vol += ex.sets.reduce((b,st) => b + (
+          ex.unilateral
+            ? (parseFloat(st.rL||st.r)||0)*(parseFloat(st.wL||st.w)||0) + (parseFloat(st.rR||st.r)||0)*(parseFloat(st.wR||st.w)||0)
+            : (parseFloat(st.r)||0)*(parseFloat(st.w)||0)
+        ), 0)
+      }
       if (vol > 0) pts.push({ date: s.session_date, w: vol })
     }
     return pts
-  }, [sessions])
+  }, [sessions, customExercises])
 
   const getProgData = useCallback(function(name) {
     const pts = []
@@ -185,71 +194,6 @@ export default function StatsPage() {
           </div>
       </div>
 
-      {/* PRs */}
-      <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-          <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>🏆 Mes PRs</div>
-          <button onClick={()=>setShowPRModal(true)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>+ Ajouter</button>
-        </div>
-        {sortedPRs.length===0 && (
-          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'32px 20px',gap:8}}>
-            <div style={{fontSize:36,opacity:0.15}}>🏆</div>
-            <div style={{fontSize:13,color:'var(--text3)',textAlign:'center'}}>Aucun PR — valide une séance pour en créer</div>
-          </div>
-        )}
-        {sortedPRs.map(p=>{
-          const isPriority=priority.some(x=>normalize(x)===normalize(p.exercise))
-          const dateStr=p.date?new Date(p.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}):''
-          return (
-            <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
-              <div>
-                <div style={{fontSize:14,fontWeight:600}}>{isPriority&&'⭐ '}{p.exercise}</div>
-                <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{dateStr && `📅 ${dateStr}`}{p.is_manual?' · manuel':''}</div>
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div style={{textAlign:'right'}}>
-                  <span style={{fontFamily:'var(--fm)',fontSize:22,fontWeight:700,color:'var(--gold)'}}>{p.weight}</span>
-                  <span style={{fontSize:13,color:'var(--text2)'}}> kg</span>
-                  <div style={{fontSize:10,color:'var(--text3)'}}>{p.reps} rep</div>
-                </div>
-                {p.is_manual&&<button onClick={()=>deletePR(p.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:16,cursor:'pointer'}}>×</button>}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Badges */}
-      <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
-        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-          <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>🏅 Mes badges</div>
-          <button onClick={checkBadges} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'4px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>↺ Vérifier</button>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-          {Object.values(BADGES).filter(b => !b.gender || b.gender === (currentUser?.gender||'male')).map(b=>{
-            const unlocked=(userBadges||[]).find(ub=>ub.badge_key===b.key)
-            const isSecret = b.secret && !unlocked
-            return (
-              <div key={b.key} style={{background:unlocked?'var(--s2)':'var(--s1)',border:`1px solid ${unlocked?b.color+'88':isSecret?'rgba(139,92,246,0.35)':'var(--border)'}`,borderRadius:14,padding:12,textAlign:'center',opacity:unlocked?1:isSecret?0.7:0.4,transition:'all .2s',position:'relative'}}>
-                {isSecret&&<div style={{position:'absolute',top:6,right:6,fontSize:8,color:'#a78bfa',fontWeight:700,letterSpacing:0.5,background:'rgba(139,92,246,0.15)',borderRadius:4,padding:'1px 4px'}}>🔮</div>}
-                <div style={{fontSize:28,marginBottom:6,filter:unlocked?'none':isSecret?'blur(5px)':'grayscale(1)'}}>
-                  {isSecret ? '❓' : b.icon}
-                </div>
-                <div style={{fontSize:11,fontWeight:700,color:unlocked?b.color:isSecret?'#a78bfa':'var(--text2)'}}>
-                  {isSecret ? '???' : b.name}
-                </div>
-                <div style={{fontSize:9,color:'var(--text3)',marginTop:2}}>
-                  {isSecret ? 'Condition secrète' : b.desc}
-                </div>
-                <div style={{fontSize:9,marginTop:4,letterSpacing:1,color:unlocked?b.color:isSecret?'#a78bfa':'var(--text3)'}}>
-                  {unlocked?'✓ DÉBLOQUÉ':isSecret?'🔒 MYSTÈRE':'Verrouillé'}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
       {/* Progression chart */}
       <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
@@ -262,8 +206,8 @@ export default function StatsPage() {
 
         {progMode==='muscle' && (
           <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
-            {Object.keys(MUSCLE_COLORS||{}).length > 0 && MUSCLE_GROUPS.map(m => (
-              <button key={m} onClick={()=>setProgMuscle(m)} style={{padding:'5px 10px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${progMuscle===m?'var(--red)':'var(--border)'}`,cursor:'pointer',fontFamily:'var(--fb)',background:progMuscle===m?'var(--red)':'var(--s3)',color:progMuscle===m?'white':'var(--text2)'}}>{getMuscleLabel(m)||m}</button>
+            {MUSCLE_GROUPS.map(m => (
+              <button key={m} onClick={()=>setProgMuscle(m)} style={{padding:'5px 10px',fontSize:11,fontWeight:600,borderRadius:8,border:`1px solid ${progMuscle===m?getMuscleColor(m):'var(--border)'}`,cursor:'pointer',fontFamily:'var(--fb)',background:progMuscle===m?getMuscleColor(m):'var(--s3)',color:progMuscle===m?'white':'var(--text2)'}}>{getMuscleLabel(m)||m}</button>
             ))}
           </div>
         )}
@@ -358,6 +302,72 @@ export default function StatsPage() {
           )
         })()}
       </div>
+
+      {/* PRs */}
+      <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>🏆 Mes PRs</div>
+          <button onClick={()=>setShowPRModal(true)} style={{background:'var(--red)',border:'none',borderRadius:8,padding:'5px 12px',color:'white',fontSize:12,fontFamily:'var(--fb)',fontWeight:700,cursor:'pointer'}}>+ Ajouter</button>
+        </div>
+        {sortedPRs.length===0 && (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',padding:'32px 20px',gap:8}}>
+            <div style={{fontSize:36,opacity:0.15}}>🏆</div>
+            <div style={{fontSize:13,color:'var(--text3)',textAlign:'center'}}>Aucun PR — valide une séance pour en créer</div>
+          </div>
+        )}
+        {sortedPRs.map(p=>{
+          const isPriority=priority.some(x=>normalize(x)===normalize(p.exercise))
+          const dateStr=p.date?new Date(p.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'}):''
+          return (
+            <div key={p.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:600}}>{isPriority&&'⭐ '}{p.exercise}</div>
+                <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{dateStr && `📅 ${dateStr}`}{p.is_manual?' · manuel':''}</div>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <div style={{textAlign:'right'}}>
+                  <span style={{fontFamily:'var(--fm)',fontSize:22,fontWeight:700,color:'var(--gold)'}}>{p.weight}</span>
+                  <span style={{fontSize:13,color:'var(--text2)'}}> kg</span>
+                  <div style={{fontSize:10,color:'var(--text3)'}}>{p.reps} rep</div>
+                </div>
+                {p.is_manual&&<button onClick={()=>deletePR(p.id)} style={{background:'none',border:'none',color:'var(--text3)',fontSize:16,cursor:'pointer'}}>×</button>}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Badges */}
+      <div style={{background:'var(--s1)',border:'1px solid var(--border)',borderRadius:16,padding:16,marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',letterSpacing:1,textTransform:'uppercase'}}>🏅 Mes badges</div>
+          <button onClick={checkBadges} style={{background:'var(--s3)',border:'1px solid var(--border)',borderRadius:8,padding:'4px 10px',color:'var(--text2)',fontSize:11,fontFamily:'var(--fb)',fontWeight:600,cursor:'pointer'}}>↺ Vérifier</button>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
+          {Object.values(BADGES).filter(b => !b.gender || b.gender === (currentUser?.gender||'male')).map(b=>{
+            const unlocked=(userBadges||[]).find(ub=>ub.badge_key===b.key)
+            const isSecret = b.secret && !unlocked
+            return (
+              <div key={b.key} style={{background:unlocked?'var(--s2)':'var(--s1)',border:`1px solid ${unlocked?b.color+'88':isSecret?'rgba(139,92,246,0.35)':'var(--border)'}`,borderRadius:14,padding:12,textAlign:'center',opacity:unlocked?1:isSecret?0.7:0.4,transition:'all .2s',position:'relative'}}>
+                {isSecret&&<div style={{position:'absolute',top:6,right:6,fontSize:8,color:'#a78bfa',fontWeight:700,letterSpacing:0.5,background:'rgba(139,92,246,0.15)',borderRadius:4,padding:'1px 4px'}}>🔮</div>}
+                <div style={{fontSize:28,marginBottom:6,filter:unlocked?'none':isSecret?'blur(5px)':'grayscale(1)'}}>
+                  {isSecret ? '❓' : b.icon}
+                </div>
+                <div style={{fontSize:11,fontWeight:700,color:unlocked?b.color:isSecret?'#a78bfa':'var(--text2)'}}>
+                  {isSecret ? '???' : b.name}
+                </div>
+                <div style={{fontSize:9,color:'var(--text3)',marginTop:2}}>
+                  {isSecret ? 'Condition secrète' : b.desc}
+                </div>
+                <div style={{fontSize:9,marginTop:4,letterSpacing:1,color:unlocked?b.color:isSecret?'#a78bfa':'var(--text3)'}}>
+                  {unlocked?'✓ DÉBLOQUÉ':isSecret?'🔒 MYSTÈRE':'Verrouillé'}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
 
       {/* PR Modal */}
       {showPRModal && (

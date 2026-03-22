@@ -83,8 +83,8 @@ export default function StatsPage() {
   }, [sessions])
   const maxBar = useMemo(() => Math.max(...last10Days.map(d=>d.sessions.reduce((a,s)=>a+(s.total_volume||0),0)),1), [last10Days])
 
+  const priority = useMemo(() => ['Développé Couché (Bench Press)','Bench Press','Squat','Deadlift','Soulevé de terre (Deadlift)'], [])
   const sortedPRs = useMemo(() => {
-    const priority = ['Développé Couché (Bench Press)','Bench Press','Squat','Deadlift','Soulevé de terre (Deadlift)']
     return [...(userPRs||[])].sort((a,b)=>{
       const ai=priority.findIndex(p=>normalize(p)===normalize(a.exercise))
       const bi=priority.findIndex(p=>normalize(p)===normalize(b.exercise))

@@ -3,7 +3,7 @@ import { useState, useMemo } from 'react'
 import { db } from '../../../lib/supabase'
 import { useStore } from '../../../lib/store'
 import ShareStory from '../ShareStory'
-import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, normalize, isBW } from '../../../lib/constants'
+import { MUSCLE_LABELS, MUSCLE_COLORS, MUSCLE_GROUPS, getMuscleColor, normalize, isBW, isBWFull, calcBWSetVolume } from '../../../lib/constants'
 import { showToast } from '../Toast'
 
 export default function HistoriquePage({ onChanged }) {
@@ -95,15 +95,14 @@ export default function HistoriquePage({ onChanged }) {
   async function saveEdit() {
     if (!editSession) return
     setSaving(true)
+    const bw = currentUser?.weight_kg || 0
     const totalVolume = editSession.exercises.reduce((a,e)=>a+e.sets.reduce((b,st)=>{
-      if (e.unilateral) {
-        const wL=parseFloat(st.wL)||0, wR=parseFloat(st.wR)||0
-        if (isBW(e.name) && wL===0 && wR===0) return b
-        return b+(parseFloat(st.rL)||0)*wL+(parseFloat(st.rR)||0)*wR
+      if (isBW(e.name)) {
+        if (e.unilateral) return b + calcBWSetVolume(e.name, parseFloat(st.rL)||0, parseFloat(st.wL)||0, bw) + calcBWSetVolume(e.name, parseFloat(st.rR)||0, parseFloat(st.wR)||0, bw)
+        return b + calcBWSetVolume(e.name, parseFloat(st.r)||0, parseFloat(st.w)||0, bw)
       }
-      const w=parseFloat(st.w)||0
-      if (isBW(e.name) && w===0) return b
-      return b+(parseFloat(st.r)||0)*w
+      if (e.unilateral) return b+(parseFloat(st.rL)||0)*(parseFloat(st.wL)||0)+(parseFloat(st.rR)||0)*(parseFloat(st.wR)||0)
+      return b+(parseFloat(st.r)||0)*(parseFloat(st.w)||0)
     },0),0)
     const { error } = await db.from('sessions').update({
       session_date: editSession.session_date,

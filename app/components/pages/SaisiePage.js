@@ -246,24 +246,11 @@ export default function SaisiePage({ onSaved, saveOffline, isOnline }) {
 
   function addExercise(name) {
     const last = getLastPerf(name)
-    let newEx
-    if (last) {
-      const prev = last.exercise
-      newEx = {
-        id: Date.now(), name,
-        unilateral: prev.unilateral || false,
-        sets: prev.sets.map((s,i) => ({
-          id: Date.now()+i,
-          r: s.r || '', w: s.w || '',
-          rL: s.rL || '', wL: s.wL || '',
-          rR: s.rR || '', wR: s.wR || '',
-        }))
-      }
-    } else {
-      newEx = {
-        id: Date.now(), name,
-        sets: Array(4).fill(null).map((_,i) => ({id:Date.now()+i,r:'',w:''}))
-      }
+    const nbSets = last ? last.exercise.sets.length : 4
+    const newEx = {
+      id: Date.now(), name,
+      unilateral: last ? (last.exercise.unilateral || false) : false,
+      sets: Array(nbSets).fill(null).map((_,i) => ({id:Date.now()+i,r:'',w:'',rL:'',wL:'',rR:'',wR:''}))
     }
     setExercises(prev => [...prev, newEx])
     setExSearch(''); setExResults([])
